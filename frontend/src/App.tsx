@@ -12,6 +12,7 @@ import Rapid from "./pages/Rapid";
 import ImageMapQuiz from "./pages/ImageMapQuiz";
 import Community from "./pages/Community";
 import NotFound from "./pages/NotFound";
+import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            <Route path="/admin" element={<Admin />} />
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/quiz" element={<Quiz />} />
