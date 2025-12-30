@@ -14,6 +14,7 @@ import ImageMapQuiz from "./pages/ImageMapQuiz";
 import Community from "./pages/Community";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import AdminWithPicker from "./pages/AdminWithPicker";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,14 @@ const App = () => (
               element={
                 <ProtectedRoute adminOnly>
                   <Admin />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/AdminWithPicker" 
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminWithPicker />
                 </ProtectedRoute>
               } 
             />

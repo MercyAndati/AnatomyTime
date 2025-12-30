@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anatomy Image Coordinate Mapper</title>
+    <title>Simple Anatomy Coordinate Picker</title>
     <style>
         * {
             margin: 0;
@@ -13,121 +13,186 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f5f7fa;
             min-height: 100vh;
             padding: 20px;
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             overflow: hidden;
         }
         
         header {
-            background: #1a202c;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px;
+            padding: 25px;
             text-align: center;
         }
         
         h1 {
-            font-size: 2.5rem;
+            font-size: 2rem;
             margin-bottom: 10px;
-            background: linear-gradient(to right, #63b3ed, #b794f4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
         }
         
         .subtitle {
-            color: #a0aec0;
-            font-size: 1.1rem;
+            opacity: 0.9;
+            font-size: 1rem;
         }
         
         .content {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            padding: 30px;
+            grid-template-columns: 1fr 400px;
+            min-height: 700px;
         }
         
-        .upload-section {
-            background: #f7fafc;
+        .image-section {
             padding: 25px;
-            border-radius: 15px;
-            border: 2px dashed #cbd5e0;
+            background: #f8fafc;
+            border-right: 1px solid #e2e8f0;
         }
         
-        .preview-section {
-            background: #f7fafc;
+        .control-section {
             padding: 25px;
-            border-radius: 15px;
-        }
-        
-        h2 {
-            color: #2d3748;
-            margin-bottom: 20px;
-            font-size: 1.5rem;
-        }
-        
-        .file-input {
-            width: 100%;
-            padding: 20px;
-            border: 2px dashed #cbd5e0;
-            border-radius: 10px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 20px;
             background: white;
         }
         
-        .file-input:hover {
+        .upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 25px;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
             border-color: #667eea;
             background: #f0f4ff;
         }
         
-        .image-preview {
-            width: 100%;
-            height: 400px;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            overflow: hidden;
+        .upload-area i {
+            font-size: 48px;
+            color: #a0aec0;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .image-container {
             position: relative;
+            width: 100%;
+            height: 500px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: auto;
             background: #edf2f7;
         }
         
-        .image-preview img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-        
-        .canvas-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        #mainImage {
+            display: block;
+            max-width: none;
+            max-height: none;
             cursor: crosshair;
+            transition: transform 0.2s;
         }
         
-        .controls {
+        .zoom-controls {
             display: flex;
+            justify-content: center;
             gap: 10px;
-            margin: 20px 0;
+            margin-top: 15px;
         }
         
-        button {
-            padding: 12px 24px;
+        .zoom-btn {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
             border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .zoom-btn:hover {
+            background: #5a67d8;
+        }
+        
+        .zoom-btn.secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .zoom-btn.secondary:hover {
+            background: #cbd5e0;
+        }
+        
+        .region-form {
+            background: #f7fafc;
+            padding: 20px;
             border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .size-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .size-control {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .size-control label {
+            font-size: 12px;
+            color: #718096;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
+            margin-top: 10px;
         }
         
         .btn-primary {
@@ -149,13 +214,12 @@
             background: #cbd5e0;
         }
         
-        .region-list {
-            margin-top: 20px;
-            background: white;
-            border-radius: 10px;
-            border: 1px solid #e2e8f0;
+        .regions-list {
             max-height: 300px;
             overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-top: 20px;
         }
         
         .region-item {
@@ -170,20 +234,17 @@
             border-bottom: none;
         }
         
-        .region-info {
-            flex: 1;
-        }
-        
-        .region-name {
-            font-weight: 600;
+        .region-info h4 {
             color: #2d3748;
+            margin-bottom: 5px;
+            font-size: 14px;
         }
         
-        .region-points {
-            font-family: monospace;
-            font-size: 0.9rem;
+        .region-info p {
             color: #718096;
-            margin-top: 5px;
+            font-size: 11px;
+            font-family: monospace;
+            margin: 2px 0;
         }
         
         .delete-btn {
@@ -191,8 +252,9 @@
             color: white;
             border: none;
             padding: 5px 10px;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
+            font-size: 12px;
         }
         
         .delete-btn:hover {
@@ -200,147 +262,255 @@
         }
         
         .export-section {
-            margin-top: 20px;
+            margin-top: 25px;
             padding: 20px;
-            background: white;
-            border-radius: 10px;
+            background: #f7fafc;
+            border-radius: 8px;
             border: 1px solid #e2e8f0;
         }
         
         textarea {
             width: 100%;
-            height: 100px;
-            padding: 10px;
+            height: 150px;
+            padding: 15px;
             border: 1px solid #e2e8f0;
-            border-radius: 5px;
+            border-radius: 6px;
             font-family: monospace;
+            font-size: 14px;
             resize: vertical;
+            background: white;
+        }
+        
+        .copy-btn {
+            background: #48bb78;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+        
+        .copy-btn:hover {
+            background: #38a169;
         }
         
         .instructions {
             background: #ebf8ff;
             border-left: 4px solid #4299e1;
             padding: 15px;
-            margin: 20px 0;
-            border-radius: 5px;
+            margin: 15px 0;
+            border-radius: 6px;
         }
         
         .instructions h3 {
             color: #2b6cb0;
             margin-bottom: 10px;
+            font-size: 16px;
         }
         
         .instructions ol {
             margin-left: 20px;
+            color: #4a5568;
         }
         
         .instructions li {
             margin-bottom: 5px;
-            color: #4a5568;
+            font-size: 14px;
         }
         
-        @media (max-width: 1024px) {
-            .content {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        .current-points {
-            font-family: monospace;
+        .coordinates-display {
             background: #2d3748;
             color: #81e6d9;
             padding: 10px;
-            border-radius: 5px;
+            border-radius: 6px;
+            font-family: monospace;
+            text-align: center;
             margin: 10px 0;
             min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .region-marker {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: #f56565;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px #f56565;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        
+        .region-marker::after {
+            content: attr(data-number);
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            background: #f56565;
+            color: white;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .click-hint {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .zoom-level {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .region-box {
+            position: absolute;
+            border: 2px solid #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            pointer-events: none;
+            transform-origin: 0 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Anatomy Image Coordinate Mapper</h1>
-            <p class="subtitle">Click on anatomy images to create clickable regions for your quizzes</p>
+            <h1>Simple Anatomy Coordinate Picker</h1>
+            <p class="subtitle">Double-click to place regions • Use buttons to zoom</p>
         </header>
         
         <div class="content">
-            <!-- Left: Upload & Controls -->
-            <div class="upload-section">
-                <h2>Upload Anatomy Image</h2>
-                
-                <div class="instructions">
-                    <h3>How to use:</h3>
-                    <ol>
-                        <li>Upload an unlabeled anatomy image</li>
-                        <li>Click "Start New Region" and enter a name</li>
-                        <li>Click around the area you want to map</li>
-                        <li>Click "Finish Region" when done</li>
-                        <li>Copy the generated JSON for your admin panel</li>
-                    </ol>
-                </div>
-                
-                <div class="file-input" onclick="document.getElementById('imageUpload').click()">
-                    📁 Click to Upload Image (PNG, JPG, SVG)
+            <!-- Left: Image Section -->
+            <div class="image-section">
+                <div class="upload-area" onclick="document.getElementById('imageUpload').click()">
+                    <i>📁</i>
+                    <h3>Upload Anatomy Image</h3>
+                    <p>Click to upload an image (PNG, JPG, SVG)</p>
                     <input type="file" id="imageUpload" accept="image/*" style="display: none;" onchange="loadImage(event)">
                 </div>
                 
-                <div class="controls">
-                    <button class="btn-primary" onclick="startNewRegion()">Start New Region</button>
-                    <button class="btn-secondary" onclick="finishRegion()">Finish Region</button>
-                    <button class="btn-secondary" onclick="undoLastPoint()">Undo Last Point</button>
-                    <button class="btn-secondary" onclick="clearAll()">Clear All</button>
+                <div class="image-container" id="imageContainer">
+                    <img id="mainImage" src="" alt="Uploaded image">
+                    <div class="zoom-level" id="zoomLevel">100%</div>
+                    <div class="click-hint" id="clickHint">Double-click to place a region</div>
                 </div>
                 
-                <div id="currentRegionInfo">
-                    <h3>Current Region:</h3>
-                    <div class="current-points" id="currentPoints">No points yet</div>
-                    
-                    <div style="margin-top: 10px;">
-                        <input type="text" 
-                               id="regionName" 
-                               placeholder="Enter region name (e.g., Frontal Lobe)" 
-                               style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 5px;"
-                               onkeyup="updateCurrentRegionName()">
-                    </div>
+                <div class="coordinates-display" id="coordinatesDisplay">
+                    Double-click on the image to place a region
+                </div>
+                
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomIn()">Zoom In (+)</button>
+                    <button class="zoom-btn" onclick="zoomOut()">Zoom Out (-)</button>
+                    <button class="zoom-btn" onclick="resetZoom()">Reset Zoom</button>
+                    <button class="zoom-btn secondary" onclick="clearAllRegions()">Clear All</button>
                 </div>
             </div>
             
-            <!-- Right: Preview & Regions -->
-            <div class="preview-section">
-                <h2>Image Preview & Regions</h2>
-                
-                <div class="image-preview">
-                    <img id="previewImage" src="" alt="Uploaded image will appear here">
-                    <canvas id="canvasOverlay" class="canvas-overlay"></canvas>
+            <!-- Right: Control Section -->
+            <div class="control-section">
+                <div class="instructions">
+                    <h3>How to Use:</h3>
+                    <ol>
+                        <li><strong>Upload</strong> your anatomy image</li>
+                        <li><strong>Double-click</strong> on the exact spot to place a region</li>
+                        <li><strong>Adjust size</strong> if needed (default is 50×50px)</li>
+                        <li><strong>Enter name</strong> and description</li>
+                        <li><strong>Click "Save Region"</strong> to add it</li>
+                        <li><strong>Use zoom buttons</strong> for better precision</li>
+                    </ol>
                 </div>
                 
-                <h3 style="margin-top: 20px;">Created Regions:</h3>
-                <div class="region-list" id="regionList">
-                    <div style="padding: 20px; text-align: center; color: #a0aec0;">
+                <div class="region-form">
+                    <h3 style="margin-bottom: 20px; color: #2d3748;">Region Details</h3>
+                    
+                    <div class="form-group">
+                        <label for="regionName">Region Name *</label>
+                        <input type="text" id="regionName" placeholder="e.g., Frontal Lobe">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="regionDescription">Description (Optional)</label>
+                        <input type="text" id="regionDescription" placeholder="Brief description for review">
+                    </div>
+                    
+                    <div class="size-controls">
+                        <div class="size-control">
+                            <label>Width (px)</label>
+                            <input type="number" id="regionWidth" value="50" min="10" max="200" onchange="updateRegionSize()">
+                        </div>
+                        <div class="size-control">
+                            <label>Height (px)</label>
+                            <input type="number" id="regionHeight" value="50" min="10" max="200" onchange="updateRegionSize()">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Coordinates (x1,y1 x2,y2 x3,y3 x4,y4)</label>
+                        <input type="text" id="regionPoints" readonly style="background: #f7fafc; font-family: monospace;">
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="saveRegion()" id="saveBtn">Save Region</button>
+                    <button class="btn btn-secondary" onclick="clearCurrentRegion()">Clear Current</button>
+                </div>
+                
+                <h3 style="margin: 20px 0 10px; color: #2d3748;">Regions Created:</h3>
+                <div class="regions-list" id="regionsList">
+                    <div style="padding: 30px; text-align: center; color: #a0aec0;">
                         No regions created yet
                     </div>
                 </div>
                 
                 <div class="export-section">
-                    <h3>Export Regions JSON:</h3>
-                    <textarea id="jsonOutput" readonly placeholder="Regions JSON will appear here..."></textarea>
-                    <div style="margin-top: 10px;">
-                        <button class="btn-primary" onclick="copyJSON()">Copy JSON</button>
-                        <button class="btn-secondary" onclick="downloadJSON()">Download JSON</button>
-                    </div>
+                    <h3 style="margin-bottom: 10px; color: #2d3748;">JSON Output for Admin Panel:</h3>
+                    <textarea id="jsonOutput" readonly placeholder="JSON will appear here..."></textarea>
+                    <button class="copy-btn" onclick="copyJSON()">Copy JSON to Clipboard</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        // Simple state management
         let image = null;
-        let canvas = null;
-        let ctx = null;
-        let scale = 1;
         let regions = [];
         let currentRegion = null;
-        let currentPoints = [];
+        let scale = 1;
+        let imageWidth = 0;
+        let imageHeight = 0;
+        let regionWidth = 50;
+        let regionHeight = 50;
+        
+        // DOM elements
+        const mainImage = document.getElementById('mainImage');
+        const imageContainer = document.getElementById('imageContainer');
         
         function loadImage(event) {
             const file = event.target.files[0];
@@ -350,269 +520,360 @@
             reader.onload = function(e) {
                 image = new Image();
                 image.onload = function() {
-                    setupCanvas();
-                    draw();
+                    imageWidth = image.width;
+                    imageHeight = image.height;
+                    
+                    mainImage.src = e.target.result;
+                    mainImage.style.width = imageWidth + 'px';
+                    mainImage.style.height = imageHeight + 'px';
+                    
+                    resetZoom();
+                    updateMarkers();
                 };
                 image.src = e.target.result;
-                document.getElementById('previewImage').src = e.target.result;
             };
             reader.readAsDataURL(file);
         }
         
-        function setupCanvas() {
-            canvas = document.getElementById('canvasOverlay');
-            ctx = canvas.getContext('2d');
+        function zoomIn() {
+            if (!image) return;
             
-            // Match canvas size to image
-            canvas.width = image.width;
-            canvas.height = image.height;
-            
-            // Calculate scale for display
-            const container = document.querySelector('.image-preview');
-            scale = Math.min(
-                container.clientWidth / image.width,
-                container.clientHeight / image.height
-            );
-            
-            canvas.style.transform = `scale(${scale})`;
-            canvas.style.transformOrigin = 'top left';
+            scale *= 1.2;
+            updateImageTransform();
+            updateZoomDisplay();
         }
         
-        function draw() {
-            if (!ctx || !image) return;
+        function zoomOut() {
+            if (!image) return;
             
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw existing regions
-            regions.forEach(region => {
-                if (region.points.length < 3) return;
-                
-                ctx.beginPath();
-                ctx.moveTo(region.points[0].x, region.points[0].y);
-                region.points.forEach(point => {
-                    ctx.lineTo(point.x, point.y);
-                });
-                ctx.closePath();
-                
-                // Fill with semi-transparent color
-                ctx.fillStyle = `rgba(102, 126, 234, 0.3)`;
-                ctx.fill();
-                
-                // Draw border
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = '#667eea';
-                ctx.stroke();
-                
-                // Draw region name in center
-                const center = getCenter(region.points);
-                ctx.fillStyle = '#2d3748';
-                ctx.font = 'bold 16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(region.name, center.x, center.y);
-            });
-            
-            // Draw current region being created
-            if (currentRegion && currentPoints.length > 0) {
-                ctx.beginPath();
-                ctx.moveTo(currentPoints[0].x, currentPoints[0].y);
-                currentPoints.forEach(point => {
-                    ctx.lineTo(point.x, point.y);
-                });
-                
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = '#f56565';
-                ctx.stroke();
-                
-                // Draw points
-                currentPoints.forEach(point => {
-                    ctx.beginPath();
-                    ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
-                    ctx.fillStyle = '#f56565';
-                    ctx.fill();
-                });
-            }
+            scale /= 1.2;
+            if (scale < 0.1) scale = 0.1;
+            updateImageTransform();
+            updateZoomDisplay();
         }
         
-        function getCenter(points) {
-            const sum = points.reduce((acc, point) => {
-                return { x: acc.x + point.x, y: acc.y + point.y };
-            }, { x: 0, y: 0 });
+        function resetZoom() {
+            if (!image) return;
             
-            return {
-                x: sum.x / points.length,
-                y: sum.y / points.length
-            };
+            // Calculate scale to fit image in container
+            const containerWidth = imageContainer.clientWidth;
+            const containerHeight = imageContainer.clientHeight;
+            
+            const scaleX = containerWidth / imageWidth;
+            const scaleY = containerHeight / imageHeight;
+            scale = Math.min(scaleX, scaleY, 1);
+            
+            updateImageTransform();
+            updateZoomDisplay();
         }
         
-        // Handle canvas clicks
-        canvas.addEventListener('click', (e) => {
-            if (!currentRegion) {
-                alert('Click "Start New Region" first!');
-                return;
-            }
-            
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / scale;
-            const y = (e.clientY - rect.top) / scale;
-            
-            currentPoints.push({ x, y });
-            updateCurrentPointsDisplay();
-            draw();
-        });
+        function updateImageTransform() {
+            mainImage.style.transform = `scale(${scale})`;
+            mainImage.style.transformOrigin = 'top left';
+            updateMarkers();
+        }
         
-        function startNewRegion() {
+        function updateZoomDisplay() {
+            document.getElementById('zoomLevel').textContent = `${Math.round(scale * 100)}%`;
+        }
+        
+        // Handle double-click
+        mainImage.addEventListener('dblclick', function(event) {
             if (!image) {
                 alert('Please upload an image first!');
                 return;
             }
             
-            const regionName = prompt('Enter region name (e.g., Frontal Lobe):');
-            if (!regionName) return;
+            // Get click position relative to image
+            const rect = mainImage.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
             
+            // Convert to original image coordinates (accounting for zoom)
+            const originalX = Math.round(x / scale);
+            const originalY = Math.round(y / scale);
+            
+            // Create region centered on click position
             currentRegion = {
-                id: regionName.toLowerCase().replace(/\s+/g, '-'),
-                name: regionName,
-                points: []
+                x: originalX - regionWidth / 2,
+                y: originalY - regionHeight / 2,
+                width: regionWidth,
+                height: regionHeight
             };
             
-            currentPoints = [];
-            updateCurrentPointsDisplay();
-            document.getElementById('regionName').value = regionName;
+            updateRegionForm();
+            updateMarkers();
             
-            draw();
+            document.getElementById('coordinatesDisplay').textContent = 
+                `Region placed at (${originalX}, ${originalY})`;
+                
+            // Focus on name field
+            document.getElementById('regionName').focus();
+        });
+        
+        function updateRegionSize() {
+            regionWidth = parseInt(document.getElementById('regionWidth').value) || 50;
+            regionHeight = parseInt(document.getElementById('regionHeight').value) || 50;
+            
+            if (currentRegion) {
+                // Keep center position
+                const centerX = currentRegion.x + currentRegion.width / 2;
+                const centerY = currentRegion.y + currentRegion.height / 2;
+                
+                currentRegion.width = regionWidth;
+                currentRegion.height = regionHeight;
+                currentRegion.x = centerX - regionWidth / 2;
+                currentRegion.y = centerY - regionHeight / 2;
+                
+                updateRegionForm();
+                updateMarkers();
+            }
         }
         
-        function finishRegion() {
-            if (!currentRegion || currentPoints.length < 3) {
-                alert('Need at least 3 points to create a region!');
+        function updateRegionForm() {
+            if (!currentRegion) return;
+            
+            const { x, y, width, height } = currentRegion;
+            
+            // Create rectangle points
+            const points = [
+                `${x},${y}`,
+                `${x + width},${y}`,
+                `${x + width},${y + height}`,
+                `${x},${y + height}`
+            ].join(' ');
+            
+            document.getElementById('regionPoints').value = points;
+            document.getElementById('regionWidth').value = width;
+            document.getElementById('regionHeight').value = height;
+        }
+        
+        function updateMarkers() {
+            // Clear all markers
+            document.querySelectorAll('.region-marker, .region-box').forEach(el => el.remove());
+            
+            // Draw existing regions
+            regions.forEach((region, index) => {
+                drawRegionMarker(region, index + 1);
+            });
+            
+            // Draw current region
+            if (currentRegion) {
+                drawCurrentRegion();
+            }
+        }
+        
+        function drawRegionMarker(region, number) {
+            // Parse points to get center
+            const points = region.points.split(' ').map(p => {
+                const [x, y] = p.split(',').map(Number);
+                return { x, y };
+            });
+            
+            const centerX = (points[0].x + points[1].x) / 2;
+            const centerY = (points[0].y + points[2].y) / 2;
+            
+            // Draw marker dot
+            const marker = document.createElement('div');
+            marker.className = 'region-marker';
+            marker.setAttribute('data-number', number);
+            
+            // Scale position for current zoom
+            marker.style.left = (centerX * scale) + 'px';
+            marker.style.top = (centerY * scale) + 'px';
+            
+            imageContainer.appendChild(marker);
+            
+            // Draw region box
+            const box = document.createElement('div');
+            box.className = 'region-box';
+            box.style.left = (points[0].x * scale) + 'px';
+            box.style.top = (points[0].y * scale) + 'px';
+            box.style.width = ((points[1].x - points[0].x) * scale) + 'px';
+            box.style.height = ((points[2].y - points[0].y) * scale) + 'px';
+            
+            imageContainer.appendChild(box);
+        }
+        
+        function drawCurrentRegion() {
+            const { x, y, width, height } = currentRegion;
+            
+            // Draw current region box (different color)
+            const box = document.createElement('div');
+            box.className = 'region-box';
+            box.style.left = (x * scale) + 'px';
+            box.style.top = (y * scale) + 'px';
+            box.style.width = (width * scale) + 'px';
+            box.style.height = (height * scale) + 'px';
+            box.style.borderColor = '#f56565';
+            box.style.background = 'rgba(245, 101, 101, 0.1)';
+            
+            imageContainer.appendChild(box);
+            
+            // Draw center marker
+            const centerX = x + width / 2;
+            const centerY = y + height / 2;
+            
+            const marker = document.createElement('div');
+            marker.className = 'region-marker';
+            marker.setAttribute('data-number', '?');
+            marker.style.left = (centerX * scale) + 'px';
+            marker.style.top = (centerY * scale) + 'px';
+            marker.style.background = '#f56565';
+            marker.style.boxShadow = '0 0 0 2px #f56565';
+            
+            imageContainer.appendChild(marker);
+        }
+        
+        function saveRegion() {
+            if (!currentRegion) {
+                alert('Please place a region first by double-clicking on the image!');
                 return;
             }
             
-            currentRegion.points = [...currentPoints];
-            regions.push(currentRegion);
+            const name = document.getElementById('regionName').value.trim();
+            const description = document.getElementById('regionDescription').value.trim();
+            const points = document.getElementById('regionPoints').value;
             
-            // Reset
+            if (!name) {
+                alert('Please enter a region name!');
+                return;
+            }
+            
+            // Check for duplicate names
+            if (regions.some(r => r.name.toLowerCase() === name.toLowerCase())) {
+                if (!confirm(`A region named "${name}" already exists. Replace it?`)) {
+                    return;
+                }
+                // Remove existing
+                regions = regions.filter(r => r.name.toLowerCase() !== name.toLowerCase());
+            }
+            
+            // Create region
+            const region = {
+                id: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+                name: name,
+                points: points,
+                description: description || `Description for ${name}`
+            };
+            
+            regions.push(region);
+            
+            // Reset form
+            clearCurrentRegion();
+            
+            // Update displays
+            updateRegionsList();
+            updateJSONOutput();
+            updateMarkers();
+            
+            document.getElementById('coordinatesDisplay').textContent = 
+                `Region "${name}" saved successfully!`;
+        }
+        
+        function clearCurrentRegion() {
             currentRegion = null;
-            currentPoints = [];
-            updateCurrentPointsDisplay();
             document.getElementById('regionName').value = '';
+            document.getElementById('regionDescription').value = '';
+            document.getElementById('regionPoints').value = '';
+            updateMarkers();
+            document.getElementById('coordinatesDisplay').textContent = 
+                'Double-click on the image to place a new region';
+        }
+        
+        function clearAllRegions() {
+            if (regions.length === 0) return;
             
-            updateRegionList();
-            draw();
-        }
-        
-        function undoLastPoint() {
-            if (currentPoints.length > 0) {
-                currentPoints.pop();
-                updateCurrentPointsDisplay();
-                draw();
-            }
-        }
-        
-        function clearAll() {
-            if (confirm('Clear all regions?')) {
+            if (confirm(`Delete all ${regions.length} regions?`)) {
                 regions = [];
-                currentRegion = null;
-                currentPoints = [];
-                updateCurrentPointsDisplay();
-                updateRegionList();
-                draw();
+                clearCurrentRegion();
+                updateRegionsList();
+                updateJSONOutput();
+                updateMarkers();
             }
         }
         
-        function updateCurrentPointsDisplay() {
-            const pointsStr = currentPoints.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(' ');
-            document.getElementById('currentPoints').textContent = pointsStr || 'No points yet';
-        }
-        
-        function updateCurrentRegionName() {
-            if (currentRegion) {
-                currentRegion.name = document.getElementById('regionName').value;
-                currentRegion.id = currentRegion.name.toLowerCase().replace(/\s+/g, '-');
-            }
-        }
-        
-        function updateRegionList() {
-            const regionList = document.getElementById('regionList');
+        function updateRegionsList() {
+            const regionsList = document.getElementById('regionsList');
             
             if (regions.length === 0) {
-                regionList.innerHTML = `
-                    <div style="padding: 20px; text-align: center; color: #a0aec0;">
+                regionsList.innerHTML = `
+                    <div style="padding: 30px; text-align: center; color: #a0aec0;">
                         No regions created yet
                     </div>
                 `;
                 return;
             }
             
-            regionList.innerHTML = regions.map((region, index) => `
+            regionsList.innerHTML = regions.map((region, index) => `
                 <div class="region-item">
                     <div class="region-info">
-                        <div class="region-name">${region.name}</div>
-                        <div class="region-points">
-                            Points: ${region.points.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(' ')}
-                        </div>
+                        <h4>${index + 1}. ${region.name}</h4>
+                        <p>Points: ${region.points}</p>
+                        <p>Size: ${getRegionSize(region.points)}</p>
+                        ${region.description ? `<p style="color: #718096; font-style: italic;">${region.description}</p>` : ''}
                     </div>
                     <button class="delete-btn" onclick="deleteRegion(${index})">Delete</button>
                 </div>
             `).join('');
+        }
+        
+        function getRegionSize(points) {
+            const coords = points.split(' ').map(p => p.split(',').map(Number));
+            if (coords.length < 2) return '0×0';
             
-            // Update JSON output
-            updateJSONOutput();
+            const width = Math.abs(coords[1][0] - coords[0][0]);
+            const height = Math.abs(coords[2][1] - coords[0][1]);
+            
+            return `${width}×${height} px`;
         }
         
         function deleteRegion(index) {
             if (confirm(`Delete region "${regions[index].name}"?`)) {
                 regions.splice(index, 1);
-                updateRegionList();
-                draw();
+                updateRegionsList();
+                updateJSONOutput();
+                updateMarkers();
             }
         }
         
         function updateJSONOutput() {
             const jsonOutput = document.getElementById('jsonOutput');
-            
-            const formattedRegions = regions.map(region => ({
-                id: region.id,
-                name: region.name,
-                points: region.points.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(' '),
-                description: `Description for ${region.name}`
-            }));
-            
-            jsonOutput.value = JSON.stringify(formattedRegions, null, 2);
+            jsonOutput.value = JSON.stringify(regions, null, 2);
         }
         
         function copyJSON() {
             const jsonOutput = document.getElementById('jsonOutput');
             jsonOutput.select();
+            jsonOutput.setSelectionRange(0, 99999);
             document.execCommand('copy');
-            alert('JSON copied to clipboard! Paste it into the admin panel.');
+            
+            // Show feedback
+            const btn = document.querySelector('.copy-btn');
+            const originalText = btn.textContent;
+            btn.textContent = '✓ Copied!';
+            btn.style.background = '#48bb78';
+            
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+            }, 2000);
+            
+            alert('JSON copied! Paste it into the "Regions" field in your admin panel.');
         }
         
-        function downloadJSON() {
-            const jsonOutput = document.getElementById('jsonOutput');
-            const blob = new Blob([jsonOutput.value], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'anatomy-regions.json';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-        
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            // Sample image for testing (remove in production)
-            const sampleImage = new Image();
-            sampleImage.onload = function() {
-                image = sampleImage;
-                setupCanvas();
-                draw();
-                document.getElementById('previewImage').src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Brain_human_normal_inferior_view.svg/800px-Brain_human_normal_inferior_view.svg.png';
+        // Initialize with sample image
+        window.addEventListener('DOMContentLoaded', () => {
+            image = new Image();
+            image.onload = function() {
+                imageWidth = image.width;
+                imageHeight = image.height;
+                mainImage.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Brain_human_normal_inferior_view.svg/800px-Brain_human_normal_inferior_view.svg.png';
+                mainImage.style.width = imageWidth + 'px';
+                mainImage.style.height = imageHeight + 'px';
+                resetZoom();
             };
-            sampleImage.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Brain_human_normal_inferior_view.svg/800px-Brain_human_normal_inferior_view.svg.png';
+            image.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Brain_human_normal_inferior_view.svg/800px-Brain_human_normal_inferior_view.svg.png';
         });
     </script>
 </body>

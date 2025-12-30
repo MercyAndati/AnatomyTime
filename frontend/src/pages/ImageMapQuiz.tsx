@@ -51,6 +51,8 @@ const ImageMapQuiz = () => {
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [gradedAnswers, setGradedAnswers] = useState<Record<string, boolean>>({});
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [clickedRegions, setClickedRegions] = useState<Record<string, 'correct' | 'incorrect' | null>>({});
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   
   // Score tracking
   const [score, setScore] = useState(0);
@@ -119,7 +121,17 @@ const ImageMapQuiz = () => {
     try {
       // First, try to fetch from backend
       const response = await axios.get('http://localhost:5000/api/image-map');
-      setQuizzes(response.data.quizzes);
+      const quizzes = response.data.quizzes || [];
+      console.log('Fetched quizzes:', quizzes.length, 'quizzes');
+      quizzes.forEach((quiz: Quiz, index: number) => {
+        console.log(`Quiz ${index + 1}:`, {
+          id: quiz._id,
+          title: quiz.title,
+          regionsCount: quiz.regions?.length || 0,
+          hasRegions: !!quiz.regions && Array.isArray(quiz.regions)
+        });
+      });
+      setQuizzes(quizzes);
     } catch (error) {
       console.log('Error fetching quizzes from backend, using mock data:', error);
       // Fallback to mock data if backend is not ready
@@ -136,6 +148,7 @@ const ImageMapQuiz = () => {
     setUserAnswers({});
     setGradedAnswers({});
     setSelectedAnswer(null);
+    setClickedRegions({});
     setShowReview(false);
     setShowResults(false);
     setScore(0);
@@ -162,6 +175,12 @@ const ImageMapQuiz = () => {
       [currentQ.id]: isCorrect
     }));
     
+    // Update clicked regions with color feedback
+    setClickedRegions(prev => ({
+      ...prev,
+      [regionId]: isCorrect ? 'correct' : 'incorrect'
+    }));
+    
     setSelectedAnswer(regionId);
     
     // Move to next question or show results
@@ -169,10 +188,12 @@ const ImageMapQuiz = () => {
       if (currentRegion < selectedQuiz.regions.length - 1) {
         setCurrentRegion(prev => prev + 1);
         setSelectedAnswer(null);
+        // Clear clicked regions for next question
+        setClickedRegions({});
       } else {
         submitQuiz();
       }
-    }, 1000);
+    }, 1500); // Slightly longer to see the feedback
   };
 
   // Submit quiz to backend
@@ -231,7 +252,18 @@ const ImageMapQuiz = () => {
       const fetchQuizById = async () => {
         try {
           const response = await axios.get(`http://localhost:5000/api/image-map/${id}`);
-          setSelectedQuiz(response.data);
+          const quizData = response.data;
+          console.log('Fetched quiz:', {
+            id: quizData._id,
+            title: quizData.title,
+            regionsCount: quizData.regions?.length || 0,
+            regions: quizData.regions?.map((r: Region) => ({
+              id: r.id,
+              name: r.name,
+              points: r.points
+            }))
+          });
+          setSelectedQuiz(quizData);
         } catch (error) {
           console.error('Error fetching quiz by ID:', error);
         }
@@ -474,44 +506,132 @@ const ImageMapQuiz = () => {
                     src={`http://localhost:5000${selectedQuiz.imageUrl}`}
                     alt={selectedQuiz.title}
                     className="w-full rounded-lg"
+                    onLoad={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      const naturalWidth = img.naturalWidth;
+                      const naturalHeight = img.naturalHeight;
+                      console.log('Image loaded:', {
+                        naturalWidth,
+                        naturalHeight,
+                        displayWidth: img.width,
+                        displayHeight: img.height,
+                        regionsCount: selectedQuiz.regions?.length || 0
+                      });
+                      setImageSize({ width: naturalWidth, height: naturalHeight });
+                    }}
                   />
                   
                   {/* SVG overlay for clickable regions */}
-                  <svg 
-                    viewBox="0 0 500 600" 
-                    className="absolute top-0 left-0 w-full h-full"
-                    style={{ pointerEvents: 'all' }}
-                  >
-                    {selectedQuiz.regions.map((region) => (
-                      <polygon
-                        key={region.id}
-                        points={region.points}
-                        fill="transparent"
-                        stroke="transparent"
-                        strokeWidth="2"
-                        className="cursor-pointer hover:fill-primary/20 transition-colors"
-                        onClick={() => handleRegionClick(region.id)}
-                      />
-                    ))}
-                    
-                    {/* Highlight selected region */}
-                    {selectedAnswer && (
-                      <polygon
-                        points={selectedQuiz.regions.find(r => r.id === selectedAnswer)?.points || ''}
-                        fill={
-                          selectedAnswer === selectedQuiz.regions[currentRegion].id
-                            ? "rgba(34, 197, 94, 0.5)" // Green for correct
-                            : "rgba(239, 68, 68, 0.5)"  // Red for incorrect
+                  {imageSize.width > 0 && imageSize.height > 0 && selectedQuiz.regions && selectedQuiz.regions.length > 0 && (
+                    <svg 
+                      viewBox={`0 0 ${imageSize.width} ${imageSize.height}`}
+                      className="absolute top-0 left-0 w-full h-full"
+                      style={{ pointerEvents: 'all' }}
+                      preserveAspectRatio="xMidYMid meet"
+                    >
+                      {selectedQuiz.regions.map((region, index) => {
+                        if (!region.points) {
+                          console.warn(`Region ${index} (${region.name}) has no points`);
+                          return null;
                         }
-                        stroke={
-                          selectedAnswer === selectedQuiz.regions[currentRegion].id
-                            ? "rgb(34, 197, 94)"
-                            : "rgb(239, 68, 68)"
+                        
+                        // Parse points to validate
+                        const pointsArray = region.points.split(' ').map(p => {
+                          const [x, y] = p.split(',').map(Number);
+                          if (isNaN(x) || isNaN(y)) {
+                            console.warn(`Invalid point in region ${region.name}: ${p}`);
+                            return null;
+                          }
+                          return { x, y };
+                        }).filter(p => p !== null) as { x: number; y: number }[];
+                        
+                        if (pointsArray.length < 3) {
+                          console.warn(`Region ${region.name} has invalid points: ${region.points}`);
+                          return null;
                         }
-                        strokeWidth="2"
-                      />
-                    )}
-                  </svg>
+                        
+                        // Check if coordinates are outside image bounds
+                        const maxX = Math.max(...pointsArray.map(p => p.x));
+                        const maxY = Math.max(...pointsArray.map(p => p.y));
+                        const minX = Math.min(...pointsArray.map(p => p.x));
+                        const minY = Math.min(...pointsArray.map(p => p.y));
+                        
+                        // If coordinates are way outside bounds, they might be from a scaled/zoomed view
+                        // Try to detect and scale them proportionally
+                        let scaledPoints = region.points;
+                        if (imageSize.width > 0 && imageSize.height > 0) {
+                          // Check if coordinates are significantly larger than image (likely wrong coordinate system)
+                          if (maxX > imageSize.width * 1.5 || maxY > imageSize.height * 1.5) {
+                            // Find the scale factor that would fit the coordinates
+                            const scaleX = imageSize.width / (maxX || 1);
+                            const scaleY = imageSize.height / (maxY || 1);
+                            const scale = Math.min(scaleX, scaleY);
+                            
+                            // Only scale if it's a reasonable scale factor (between 0.1 and 10)
+                            if (scale > 0.1 && scale < 10) {
+                              console.warn(`Region ${region.name} coordinates out of bounds. Scaling by ${scale.toFixed(2)}`);
+                              scaledPoints = pointsArray.map(p => 
+                                `${Math.round(p.x * scale)},${Math.round(p.y * scale)}`
+                              ).join(' ');
+                            }
+                          }
+                        }
+                        
+                        // Log first few regions for debugging
+                        if (index < 3) {
+                          console.log(`Region ${index + 1} (${region.name}):`, {
+                            points: region.points,
+                            scaledPoints: scaledPoints !== region.points ? scaledPoints : 'none',
+                            parsed: pointsArray,
+                            viewBox: `${imageSize.width} x ${imageSize.height}`,
+                            bounds: {
+                              minX, maxX, minY, maxY
+                            },
+                            needsScaling: maxX > imageSize.width || maxY > imageSize.height
+                          });
+                        }
+                        
+                        // Determine fill color based on state
+                        let fillColor = "rgba(255, 255, 255, 0.3)"; // Default: translucent white
+                        let strokeColor = "rgba(255, 255, 255, 0.6)";
+                        let strokeWidth = 2;
+                        
+                        if (clickedRegions[region.id] === 'correct') {
+                          fillColor = "rgba(34, 197, 94, 0.5)"; // Green for correct
+                          strokeColor = "rgb(34, 197, 94)";
+                          strokeWidth = 3;
+                        } else if (clickedRegions[region.id] === 'incorrect') {
+                          fillColor = "rgba(239, 68, 68, 0.5)"; // Red for incorrect
+                          strokeColor = "rgb(239, 68, 68)";
+                          strokeWidth = 3;
+                        }
+                        
+                        return (
+                          <polygon
+                            key={region.id || `region-${index}`}
+                            points={scaledPoints}
+                            fill={fillColor}
+                            stroke={strokeColor}
+                            strokeWidth={strokeWidth}
+                            className="cursor-pointer transition-all duration-300"
+                            onClick={() => handleRegionClick(region.id)}
+                            style={{
+                              filter: clickedRegions[region.id] ? 'drop-shadow(0 0 8px currentColor)' : 'none'
+                            }}
+                          />
+                        );
+                      })}
+                    </svg>
+                  )}
+                  
+                  {/* Debug info - remove in production */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="absolute top-2 right-2 bg-black/70 text-white text-xs p-2 rounded z-10">
+                      <div>Regions: {selectedQuiz.regions?.length || 0}</div>
+                      <div>Image: {imageSize.width} × {imageSize.height}</div>
+                      <div>ViewBox: {imageSize.width || 0} × {imageSize.height || 0}</div>
+                    </div>
+                  )}
                 </div>
                 
                 {selectedQuiz.regions[currentRegion].hint && (
