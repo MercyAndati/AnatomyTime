@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Quiz from "./pages/Quiz";
@@ -11,8 +12,8 @@ import Flashcards from "./pages/Flashcards";
 import Rapid from "./pages/Rapid";
 import ImageMapQuiz from "./pages/ImageMapQuiz";
 import Community from "./pages/Community";
-import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -24,7 +25,6 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/admin" element={<Admin />} />
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/quiz" element={<Quiz />} />
@@ -32,6 +32,14 @@ const App = () => (
             <Route path="/rapid" element={<Rapid />} />
             <Route path="/image-map" element={<ImageMapQuiz />} />
             <Route path="/community" element={<Community />} />
+            <Route 
+              path="/admin" 
+              element={
+                <ProtectedRoute adminOnly>
+                  <Admin />
+                </ProtectedRoute>
+              } 
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

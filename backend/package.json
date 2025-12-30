@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "nodemon src/server.ts",
+    "dev": "nodemon --watch src --ext ts --exec ts-node src/server.ts",
     "seed": "ts-node src/seed/imageMapQuizzes.ts",
     "test": "tap",
     "eslint": "eslint \"**/*.{js,cjs,ts,mjs,jsx,tsx}\"",
@@ -15,7 +15,7 @@
     "template-oss-apply": "template-oss-apply --force",
     "snap": "tap",
     "posttest": "npm run lint",
-    "seed:admin": "ts-node src/seed/adminUser.ts",
+    "seed:admin": "node seedAdmin",
     "seed:quiz": "ts-node src/seed/imageMapQuizzes.ts"
   },
   "keywords": [],
@@ -23,6 +23,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
@@ -30,7 +32,9 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.0.2",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "nodemon": "^3.1.11",
+    "typescript": "^5.9.3"
   },
   "files": [
     "bin/",

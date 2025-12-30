@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { Upload, Plus, Trash2, Eye, Copy, Check } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import config from "@/config";
 
 interface Region {
   id: string;
@@ -18,6 +20,7 @@ interface Region {
 }
 
 const Admin = () => {
+  const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [difficulty, setDifficulty] = useState("standard");
@@ -99,77 +102,93 @@ const Admin = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  if (!title || !description || !unlabeledImage || !labeledImage) {
+    toast({
+      title: "Missing information",
+      description: "Please fill all required fields and upload both images",
+      variant: "destructive",
+    });
+    return;
+  }
+  
+  if (regions.some(r => !r.name || !r.points)) {
+    toast({
+      title: "Incomplete regions",
+      description: "Please fill all region names and points",
+      variant: "destructive",
+    });
+    return;
+  }
+  
+  setIsCreating(true);
+  
+  try {
+    const token = localStorage.getItem('token');
     
-    if (!title || !description || !unlabeledImage || !labeledImage) {
+    if (!token) {
       toast({
-        title: "Missing information",
-        description: "Please fill all required fields and upload both images",
+        title: "Authentication required",
+        description: "Please login to create quizzes",
         variant: "destructive",
       });
+      navigate("/auth");
       return;
     }
     
-    if (regions.some(r => !r.name || !r.points)) {
-      toast({
-        title: "Incomplete regions",
-        description: "Please fill all region names and points",
-        variant: "destructive",
-      });
-      return;
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('description', description);
+    formData.append('regions', JSON.stringify(regions));
+    formData.append('difficulty', difficulty);
+    formData.append('category', category);
+    formData.append('tags', tags);
+    
+    if (unlabeledImage) formData.append('unlabeledImage', unlabeledImage);
+    if (labeledImage) formData.append('labeledImage', labeledImage);
+    
+    const response = await fetch(`${config.apiUrl}/admin/create-quiz`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to create quiz');
     }
     
-    setIsCreating(true);
+    toast({
+      title: "Success!",
+      description: `Quiz "${title}" created successfully`,
+    });
     
-    try {
-      const formData = new FormData();
-      formData.append('title', title);
-      formData.append('description', description);
-      formData.append('regions', JSON.stringify(regions));
-      formData.append('difficulty', difficulty);
-      formData.append('category', category);
-      formData.append('tags', tags);
-      
-      if (unlabeledImage) formData.append('unlabeledImage', unlabeledImage);
-      if (labeledImage) formData.append('labeledImage', labeledImage);
-      
-      const response = await fetch('http://localhost:5000/api/admin/create-quiz', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create quiz');
-      }
-      
-      toast({
-        title: "Success!",
-        description: `Quiz "${title}" created successfully`,
-      });
-      
-      // Reset form
-      setTitle("");
-      setDescription("");
-      setUnlabeledImage(null);
-      setLabeledImage(null);
-      setPreviewImage(null);
-      setRegions([{ id: "region-1", name: "", points: "", description: "" }]);
-      
-      if (unlabeledInputRef.current) unlabeledInputRef.current.value = "";
-      if (labeledInputRef.current) labeledInputRef.current.value = "";
-      
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreating(false);
-    }
-  };
+    // Reset form
+    setTitle("");
+    setDescription("");
+    setUnlabeledImage(null);
+    setLabeledImage(null);
+    setPreviewImage(null);
+    setRegions([{ id: "region-1", name: "", points: "", description: "" }]);
+    setTags("");
+    
+    if (unlabeledInputRef.current) unlabeledInputRef.current.value = "";
+    if (labeledInputRef.current) labeledInputRef.current.value = "";
+    
+  } catch (error: any) {
+    toast({
+      title: "Error",
+      description: error.message,
+      variant: "destructive",
+    });
+  } finally {
+    setIsCreating(false);
+  }
+};
 
   return (
     <div className="min-h-screen pb-20">

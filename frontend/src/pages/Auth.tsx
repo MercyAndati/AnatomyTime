@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import config from "@/config";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState(""); // For signup
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -21,43 +23,65 @@ const Auth = () => {
 
     try {
       if (isLogin) {
-  // Real login API call
-  const response = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
-  });
-  
-  const data = await response.json();
-  
-  if (!response.ok) {
-    throw new Error(data.message || 'Login failed');
-  }
-  
-  // Handle successful login (store token, etc.)
-  localStorage.setItem('token', data.token);
-  
-} else {
-  // Real signup API call
-  const response = await fetch('/api/auth/signup', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
-  });
-  
-  const data = await response.json();
-  
-  if (!response.ok) {
-    throw new Error(data.message || 'Signup failed');
-  }
-  
-  // Handle successful signup
-  localStorage.setItem('token', data.token);
-}
+        // Login API call
+        const response = await fetch(`${config.apiUrl}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Login failed');
+        }
+        
+        // Handle successful login
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Dispatch custom event to update Navigation
+        window.dispatchEvent(new Event('userLogin'));
+        
+        toast({
+          title: "Success!",
+          description: "Logged in successfully",
+        });
+        
+        navigate("/"); // Redirect to home
+        
+      } else {
+        // Signup API call
+        const response = await fetch(`${config.apiUrl}/auth/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, name })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Signup failed');
+        }
+        
+        // Handle successful signup
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Dispatch custom event to update Navigation
+        window.dispatchEvent(new Event('userLogin'));
+        
+        toast({
+          title: "Success!",
+          description: "Account created successfully",
+        });
+        
+        navigate("/"); // Redirect to home
+      }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Something went wrong",
         variant: "destructive",
       });
     } finally {
@@ -88,6 +112,21 @@ const Auth = () => {
           </div>
 
           <form onSubmit={handleAuth} className="space-y-4">
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Your Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required={!isLogin}
+                  className="glass"
+                />
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -111,6 +150,7 @@ const Auth = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="glass"
+                minLength={6}
               />
             </div>
 
@@ -144,6 +184,13 @@ const Auth = () => {
             >
               Back to Home
             </Button>
+          </div>
+          
+          {/* Admin credentials for development */}
+          <div className="mt-4 text-center">
+            <p className="text-xs text-muted-foreground">
+              For testing: admin@anatomyai.com / admin123
+            </p>
           </div>
         </div>
       </div>

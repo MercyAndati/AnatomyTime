@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Brain, FileText, Zap, Users, Map, Menu } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Brain, FileText, Zap, Users, Map, Menu, User, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,88 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 export function Navigation() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { toast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const checkUser = () => {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        try {
+          setUser(JSON.parse(userData));
+        } catch (e) {
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+    };
+
+    checkUser();
+
+    // Listen for storage changes (when user logs in/out in another tab)
+    const handleStorageChange = () => {
+      checkUser();
+    };
+
+    // Listen for custom login event (same tab)
+    const handleLogin = () => {
+      checkUser();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('userLogin', handleLogin);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userLogin', handleLogin);
+    };
+  }, [location]); // Re-check when route changes (e.g., after login)
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    // Dispatch custom event for other components
+    window.dispatchEvent(new Event('userLogout'));
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out",
+    });
+    navigate("/");
+  };
+
+  const getUserInitials = (name?: string, email?: string) => {
+    if (name) {
+      return name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    if (email) {
+      return email[0].toUpperCase();
+    }
+    return 'U';
+  };
 
   const navLinks = [
     { to: "/quiz", icon: FileText, label: "Quiz" },
@@ -71,15 +148,43 @@ export function Navigation() {
                     );
                   })}
                   <div className="mt-auto px-6 pt-6 border-t">
-                    <Button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        navigate("/auth");
-                      }}
-                      className="w-full gradient-primary py-6 text-base"
-                    >
-                      Get Started
-                    </Button>
+                    {user ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-accent/50">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={user.avatar} />
+                            <AvatarFallback>
+                              {getUserInitials(user.name, user.email)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{user.name || 'User'}</p>
+                            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            setMobileMenuOpen(false);
+                            handleLogout();
+                          }}
+                          variant="outline"
+                          className="w-full"
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Logout
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          navigate("/auth");
+                        }}
+                        className="w-full gradient-primary py-6 text-base"
+                      >
+                        Get Started
+                      </Button>
+                    )}
                   </div>
                 </nav>
               </SheetContent>
@@ -119,36 +224,83 @@ export function Navigation() {
             })}
           </div>
 
-          {/* Right side - Theme toggle and CTA */}
+          {/* Right side - Theme toggle and User Menu/CTA */}
           <div className="flex items-center gap-2 sm:gap-3">
             <ThemeToggle />
             
-            {/* Responsive CTA Buttons */}
-            {/* Desktop */}
-            <Button
-              onClick={() => navigate("/auth")}
-              className="hidden lg:flex gradient-primary min-w-[120px]"
-            >
-              Get Started
-            </Button>
-            
-            {/* Tablet */}
-            <Button
-              onClick={() => navigate("/auth")}
-              className="hidden md:flex lg:hidden gradient-primary text-sm px-4"
-            >
-              Get Started
-            </Button>
-            
-            {/* Mobile */}
-            <Button
-              onClick={() => navigate("/auth")}
-              className="md:hidden gradient-primary text-sm px-3"
-              size="sm"
-            >
-              <span className="sm:hidden">Go</span>
-              <span className="hidden sm:inline">Start</span>
-            </Button>
+            {user ? (
+              /* User Menu Dropdown */
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="relative h-10 w-10 rounded-full"
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={user.avatar} alt={user.name || user.email} />
+                      <AvatarFallback>
+                        {getUserInitials(user.name, user.email)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {user.name || 'User'}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {user.isAdmin && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate("/admin")}>
+                        <User className="mr-2 h-4 w-4" />
+                        Admin Panel
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              /* Get Started Buttons */
+              <>
+                {/* Desktop */}
+                <Button
+                  onClick={() => navigate("/auth")}
+                  className="hidden lg:flex gradient-primary min-w-[120px]"
+                >
+                  Get Started
+                </Button>
+                
+                {/* Tablet */}
+                <Button
+                  onClick={() => navigate("/auth")}
+                  className="hidden md:flex lg:hidden gradient-primary text-sm px-4"
+                >
+                  Get Started
+                </Button>
+                
+                {/* Mobile */}
+                <Button
+                  onClick={() => navigate("/auth")}
+                  className="md:hidden gradient-primary text-sm px-3"
+                  size="sm"
+                >
+                  <span className="sm:hidden">Go</span>
+                  <span className="hidden sm:inline">Start</span>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
