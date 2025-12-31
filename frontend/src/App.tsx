@@ -12,7 +12,6 @@ import Flashcards from "./pages/Flashcards";
 import Rapid from "./pages/Rapid";
 import ImageMapQuiz from "./pages/ImageMapQuiz";
 import Community from "./pages/Community";
-import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import AdminWithPicker from "./pages/AdminWithPicker";
 
@@ -32,22 +31,15 @@ const App = () => (
             <Route path="/flashcards" element={<Flashcards />} />
             <Route path="/rapid" element={<Rapid />} />
             <Route path="/image-map" element={<ImageMapQuiz />} />
+            <Route path="/image-map/:id" element={<ImageMapQuiz />} />
             <Route path="/community" element={<Community />} />
-            <Route 
-              path="/admin" 
-              element={
-                <ProtectedRoute adminOnly>
-                  <Admin />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/AdminWithPicker" 
+            <Route
+              path="/admin-image-map"
               element={
                 <ProtectedRoute adminOnly>
                   <AdminWithPicker />
                 </ProtectedRoute>
-              } 
+              }
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

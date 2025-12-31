@@ -2,10 +2,11 @@ import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Heart, Bone, Eye, ArrowLeft, CheckCircle, XCircle } from "lucide-react";
+import { Brain, Heart, Bone, Eye, ArrowLeft, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import { useToast } from "@/hooks/use-toast";
 
 // Define interfaces based on backend models
 interface Region {
@@ -38,78 +39,29 @@ interface Quiz {
 
 const ImageMapQuiz = () => {
   const { id } = useParams(); // For when viewing a specific quiz
+  const { toast } = useToast();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Quiz state
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [currentRegion, setCurrentRegion] = useState(0);
   const [showReview, setShowReview] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  
+
   // Answer tracking
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [gradedAnswers, setGradedAnswers] = useState<Record<string, boolean>>({});
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [clickedRegions, setClickedRegions] = useState<Record<string, 'correct' | 'incorrect' | null>>({});
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-  
+
   // Score tracking
   const [score, setScore] = useState(0);
   const [total, setTotal] = useState(0);
   const [quizStartTime, setQuizStartTime] = useState<number>(0);
-  
-  // Mock data for development (remove once backend is working)
-  const availableQuizzes: Quiz[] = [
-    {
-      _id: "brain",
-      title: "Brain Anatomy",
-      description: "Identify major brain structures",
-      difficulty: "hard",
-      category: "Neuroanatomy",
-      tags: ["brain", "cerebrum", "lobes"],
-      likes: 124,
-      plays: 156,
-      avgScore: 72,
-      imageUrl: "/api/images/brain.jpg",
-      labeledImageUrl: "/api/images/brain-labeled.jpg",
-      createdBy: {
-        _id: "1",
-        name: "Admin",
-        email: "admin@example.com"
-      },
-      regions: [
-        { id: "frontal", name: "Frontal Lobe", points: "200,100 300,100 300,200 200,200" },
-        { id: "parietal", name: "Parietal Lobe", points: "300,100 400,100 400,200 300,200" },
-        { id: "temporal", name: "Temporal Lobe", points: "200,200 300,200 300,300 200,300" },
-        { id: "occipital", name: "Occipital Lobe", points: "300,200 400,200 400,300 300,300" },
-      ]
-    },
-    {
-      _id: "heart",
-      title: "Heart Anatomy",
-      description: "Label the chambers and vessels",
-      difficulty: "standard",
-      category: "Cardiovascular",
-      tags: ["heart", "circulatory", "chambers"],
-      likes: 98,
-      plays: 132,
-      avgScore: 65,
-      imageUrl: "/api/images/heart.jpg",
-      labeledImageUrl: "/api/images/heart-labeled.jpg",
-      createdBy: {
-        _id: "1",
-        name: "Admin",
-        email: "admin@example.com"
-      },
-      regions: [
-        { id: "ra", name: "Right Atrium", points: "150,100 250,100 250,200 150,200" },
-        { id: "rv", name: "Right Ventricle", points: "150,200 250,200 250,350 150,350" },
-        { id: "la", name: "Left Atrium", points: "250,100 350,100 350,200 250,200" },
-        { id: "lv", name: "Left Ventricle", points: "250,200 350,200 350,350 250,350" },
-      ]
-    }
-  ];
+
+
 
   // Fetch all quizzes on component mount
   useEffect(() => {
@@ -120,7 +72,9 @@ const ImageMapQuiz = () => {
     setLoading(true);
     try {
       // First, try to fetch from backend
-      const response = await axios.get('http://localhost:5000/api/image-map');
+      const token = localStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await axios.get('http://localhost:5000/api/image-map', { headers });
       const quizzes = response.data.quizzes || [];
       console.log('Fetched quizzes:', quizzes.length, 'quizzes');
       quizzes.forEach((quiz: Quiz, index: number) => {
@@ -133,17 +87,55 @@ const ImageMapQuiz = () => {
       });
       setQuizzes(quizzes);
     } catch (error) {
-      console.log('Error fetching quizzes from backend, using mock data:', error);
-      // Fallback to mock data if backend is not ready
-      setQuizzes(availableQuizzes);
+      console.error('Error fetching quizzes:', error);
+      // setQuizzes([]); // Optional: clear quizzes on error if desired, but state init is [] anyway
     } finally {
       setLoading(false);
     }
   };
 
+
+  // Delete quiz
+  const deleteQuiz = async (e: React.MouseEvent, quizId: string) => {
+    e.stopPropagation(); // Prevent card click
+    if (!window.confirm("Are you sure you want to delete this quiz? This cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      await axios.delete(`http://localhost:5000/api/image-map/${quizId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Remove from state
+      setQuizzes(prev => prev.filter(q => q._id !== quizId));
+    } catch (error) {
+      console.error('Error deleting quiz:', error);
+      alert('Failed to delete quiz');
+    }
+  };
+
+  // Helper to shuffle array
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+  };
+
+  // State for preventing double clicks/transitions
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
   // Start quiz
   const startQuiz = (quiz: Quiz) => {
-    setSelectedQuiz(quiz);
+    // Clone and shuffle regions for randomization
+    const quizCopy = { ...quiz, regions: shuffleArray(quiz.regions) };
+    setSelectedQuiz(quizCopy);
     setCurrentRegion(0);
     setUserAnswers({});
     setGradedAnswers({});
@@ -154,35 +146,37 @@ const ImageMapQuiz = () => {
     setScore(0);
     setTotal(quiz.regions.length);
     setQuizStartTime(Date.now());
+    setIsTransitioning(false);
   };
 
   // Handle region click
   const handleRegionClick = (regionId: string) => {
-    if (showResults || showReview || !selectedQuiz) return;
-    
+    if (showResults || showReview || !selectedQuiz || isTransitioning) return;
+
+    setIsTransitioning(true);
     const currentQ = selectedQuiz.regions[currentRegion];
-    
+
     // Save user answer
     setUserAnswers(prev => ({
       ...prev,
       [currentQ.id]: regionId
     }));
-    
+
     // Check if correct immediately
     const isCorrect = regionId === currentQ.id;
     setGradedAnswers(prev => ({
       ...prev,
       [currentQ.id]: isCorrect
     }));
-    
+
     // Update clicked regions with color feedback
     setClickedRegions(prev => ({
       ...prev,
       [regionId]: isCorrect ? 'correct' : 'incorrect'
     }));
-    
+
     setSelectedAnswer(regionId);
-    
+
     // Move to next question or show results
     setTimeout(() => {
       if (currentRegion < selectedQuiz.regions.length - 1) {
@@ -190,35 +184,55 @@ const ImageMapQuiz = () => {
         setSelectedAnswer(null);
         // Clear clicked regions for next question
         setClickedRegions({});
+        setIsTransitioning(false); // Enable clicks for next question
       } else {
-        submitQuiz();
+        // Pass the final state to submitQuiz because state updates are async
+        const finalGradedAnswers = {
+          ...gradedAnswers,
+          [currentQ.id]: isCorrect
+        };
+        const finalUserAnswers = {
+          ...userAnswers,
+          [currentQ.id]: regionId
+        };
+
+        // We don't reset isTransitioning here immediately because showResults will change the view
+        submitQuiz(finalGradedAnswers, finalUserAnswers);
+        setIsTransitioning(false);
       }
     }, 1500); // Slightly longer to see the feedback
   };
 
   // Submit quiz to backend
-  const submitQuiz = async () => {
+  const submitQuiz = async (
+    finalGradedAnswers?: Record<string, boolean>,
+    finalUserAnswers?: Record<string, string>
+  ) => {
     if (!selectedQuiz) return;
-    
+
+    // Use passed final state or fallback to current state (though fallback usually misses last update)
+    const answersToGrade = finalGradedAnswers || gradedAnswers;
+    const answersToSubmit = finalUserAnswers || userAnswers;
+
     try {
       const token = localStorage.getItem('token');
       const timeSpent = Math.floor((Date.now() - quizStartTime) / 1000); // Convert to seconds
-      
+
       // Calculate score locally first
-      const correctCount = Object.values(gradedAnswers).filter(Boolean).length;
+      const correctCount = Object.values(answersToGrade).filter(Boolean).length;
       const localScore = correctCount;
       const localTotal = selectedQuiz.regions.length;
-      
+
       setScore(localScore);
       setTotal(localTotal);
       setShowResults(true);
-      
+
       // If user is logged in, submit to backend
       if (token) {
         await axios.post(
           `http://localhost:5000/api/image-map/${selectedQuiz._id}/attempt`,
           {
-            answers: Object.entries(userAnswers).map(([questionId, userAnswer]) => ({
+            answers: Object.entries(answersToSubmit).map(([questionId, userAnswer]) => ({
               questionId,
               userAnswer
             })),
@@ -231,7 +245,7 @@ const ImageMapQuiz = () => {
           }
         );
       }
-      
+
     } catch (error) {
       console.error('Error submitting quiz:', error);
       // Still show results even if backend fails
@@ -277,7 +291,7 @@ const ImageMapQuiz = () => {
     return (
       <div className="min-h-screen pb-20">
         <Navigation />
-        
+
         <div className="container mx-auto px-4 pt-32">
           <div className="max-w-5xl mx-auto animate-fade-in">
             <div className="text-center mb-12">
@@ -297,15 +311,15 @@ const ImageMapQuiz = () => {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {quizzes.map((quiz) => {
                   let Icon = Brain;
-                  switch(quiz.category.toLowerCase()) {
+                  switch (quiz.category.toLowerCase()) {
                     case 'neuroanatomy': Icon = Brain; break;
                     case 'cardiovascular': Icon = Heart; break;
                     case 'skeletal': Icon = Bone; break;
                     default: Icon = Eye;
                   }
-                  
+
                   return (
-                    <Card 
+                    <Card
                       key={quiz._id}
                       className="glass-card cursor-pointer hover:scale-105 transition-all duration-300 group"
                       onClick={() => startQuiz(quiz)}
@@ -319,14 +333,25 @@ const ImageMapQuiz = () => {
                             {quiz.difficulty}
                           </Badge>
                         </div>
-                        
+
+                        {/* Admin delete button - simple check, ideally check token/user role */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => deleteQuiz(e, quiz._id)}
+                          title="Delete Quiz"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+
                         <div>
                           <h3 className="text-xl font-semibold mb-2">{quiz.title}</h3>
                           <p className="text-muted-foreground text-sm">
                             {quiz.description}
                           </p>
                         </div>
-                        
+
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">Regions:</span>
@@ -341,7 +366,7 @@ const ImageMapQuiz = () => {
                             <span>{quiz.plays}</span>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center justify-between pt-2 border-t border-glass-border">
                           <span className="text-sm text-muted-foreground">
                             {quiz.category}
@@ -358,7 +383,7 @@ const ImageMapQuiz = () => {
             )}
           </div>
         </div>
-      </div>
+      </div >
     );
   }
 
@@ -367,7 +392,7 @@ const ImageMapQuiz = () => {
     return (
       <div className="min-h-screen pb-20">
         <Navigation />
-        
+
         <div className="container mx-auto px-4 pt-32">
           <div className="max-w-4xl mx-auto animate-fade-in">
             <Button
@@ -386,37 +411,36 @@ const ImageMapQuiz = () => {
               <div className="text-center">
                 <h2 className="text-3xl font-bold mb-2">Quiz Review</h2>
                 <p className="text-muted-foreground">
-                  Score: {score} / {total} ({Math.round((score/total)*100)}%)
+                  Score: {score} / {total} ({Math.round((score / total) * 100)}%)
                 </p>
               </div>
-              
+
               {/* Show labeled image in review mode */}
               <div className="mt-4">
-                <img 
+                <img
                   src={`http://localhost:5000${selectedQuiz.labeledImageUrl}`}
                   alt={`${selectedQuiz.title} - Labeled`}
                   className="w-full max-w-md mx-auto rounded-lg border-2 border-primary/20"
                 />
               </div>
-              
+
               <div className="space-y-4">
                 {selectedQuiz.regions.map((region, index) => (
                   <div key={region.id} className="glass rounded-xl p-4">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="font-semibold">Question {index + 1}</h3>
-                      <div className={`px-3 py-1 rounded-full text-sm ${
-                        gradedAnswers[region.id] 
-                          ? 'bg-green-500/20 text-green-700' 
-                          : 'bg-red-500/20 text-red-700'
-                      }`}>
+                      <div className={`px-3 py-1 rounded-full text-sm ${gradedAnswers[region.id]
+                        ? 'bg-green-500/20 text-green-700'
+                        : 'bg-red-500/20 text-red-700'
+                        }`}>
                         {gradedAnswers[region.id] ? '✓ Correct' : '✗ Incorrect'}
                       </div>
                     </div>
-                    
+
                     <p className="mb-2">
                       <strong>Question:</strong> Identify: {region.name}
                     </p>
-                    
+
                     <div className="flex gap-4 mb-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Your Answer:</p>
@@ -427,7 +451,7 @@ const ImageMapQuiz = () => {
                         <p className="font-semibold text-green-600">{region.name}</p>
                       </div>
                     </div>
-                    
+
                     {region.description && (
                       <div className="mt-4 p-3 bg-muted/20 rounded-lg">
                         <p className="text-sm text-muted-foreground">{region.description}</p>
@@ -436,15 +460,15 @@ const ImageMapQuiz = () => {
                   </div>
                 ))}
               </div>
-              
+
               <div className="flex gap-4 justify-center">
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => setShowReview(false)}
                 >
                   Back to Results
                 </Button>
-                <Button 
+                <Button
                   onClick={resetQuiz}
                   className="gradient-primary"
                 >
@@ -462,7 +486,7 @@ const ImageMapQuiz = () => {
   return (
     <div className="min-h-screen pb-20">
       <Navigation />
-      
+
       <div className="container mx-auto px-4 pt-32">
         <div className="max-w-4xl mx-auto animate-fade-in">
           <Button
@@ -499,10 +523,10 @@ const ImageMapQuiz = () => {
                     {selectedQuiz.regions[currentRegion].name}
                   </span>
                 </p>
-                
+
                 <div className="relative max-w-md mx-auto">
                   {/* Display the unlabeled image */}
-                  <img 
+                  <img
                     src={`http://localhost:5000${selectedQuiz.imageUrl}`}
                     alt={selectedQuiz.title}
                     className="w-full rounded-lg"
@@ -520,10 +544,10 @@ const ImageMapQuiz = () => {
                       setImageSize({ width: naturalWidth, height: naturalHeight });
                     }}
                   />
-                  
+
                   {/* SVG overlay for clickable regions */}
                   {imageSize.width > 0 && imageSize.height > 0 && selectedQuiz.regions && selectedQuiz.regions.length > 0 && (
-                    <svg 
+                    <svg
                       viewBox={`0 0 ${imageSize.width} ${imageSize.height}`}
                       className="absolute top-0 left-0 w-full h-full"
                       style={{ pointerEvents: 'all' }}
@@ -534,7 +558,7 @@ const ImageMapQuiz = () => {
                           console.warn(`Region ${index} (${region.name}) has no points`);
                           return null;
                         }
-                        
+
                         // Parse points to validate
                         const pointsArray = region.points.split(' ').map(p => {
                           const [x, y] = p.split(',').map(Number);
@@ -544,18 +568,18 @@ const ImageMapQuiz = () => {
                           }
                           return { x, y };
                         }).filter(p => p !== null) as { x: number; y: number }[];
-                        
+
                         if (pointsArray.length < 3) {
                           console.warn(`Region ${region.name} has invalid points: ${region.points}`);
                           return null;
                         }
-                        
+
                         // Check if coordinates are outside image bounds
                         const maxX = Math.max(...pointsArray.map(p => p.x));
                         const maxY = Math.max(...pointsArray.map(p => p.y));
                         const minX = Math.min(...pointsArray.map(p => p.x));
                         const minY = Math.min(...pointsArray.map(p => p.y));
-                        
+
                         // If coordinates are way outside bounds, they might be from a scaled/zoomed view
                         // Try to detect and scale them proportionally
                         let scaledPoints = region.points;
@@ -566,17 +590,17 @@ const ImageMapQuiz = () => {
                             const scaleX = imageSize.width / (maxX || 1);
                             const scaleY = imageSize.height / (maxY || 1);
                             const scale = Math.min(scaleX, scaleY);
-                            
+
                             // Only scale if it's a reasonable scale factor (between 0.1 and 10)
                             if (scale > 0.1 && scale < 10) {
                               console.warn(`Region ${region.name} coordinates out of bounds. Scaling by ${scale.toFixed(2)}`);
-                              scaledPoints = pointsArray.map(p => 
+                              scaledPoints = pointsArray.map(p =>
                                 `${Math.round(p.x * scale)},${Math.round(p.y * scale)}`
                               ).join(' ');
                             }
                           }
                         }
-                        
+
                         // Log first few regions for debugging
                         if (index < 3) {
                           console.log(`Region ${index + 1} (${region.name}):`, {
@@ -590,12 +614,12 @@ const ImageMapQuiz = () => {
                             needsScaling: maxX > imageSize.width || maxY > imageSize.height
                           });
                         }
-                        
+
                         // Determine fill color based on state
                         let fillColor = "rgba(255, 255, 255, 0.3)"; // Default: translucent white
                         let strokeColor = "rgba(255, 255, 255, 0.6)";
                         let strokeWidth = 2;
-                        
+
                         if (clickedRegions[region.id] === 'correct') {
                           fillColor = "rgba(34, 197, 94, 0.5)"; // Green for correct
                           strokeColor = "rgb(34, 197, 94)";
@@ -605,7 +629,7 @@ const ImageMapQuiz = () => {
                           strokeColor = "rgb(239, 68, 68)";
                           strokeWidth = 3;
                         }
-                        
+
                         return (
                           <polygon
                             key={region.id || `region-${index}`}
@@ -623,7 +647,7 @@ const ImageMapQuiz = () => {
                       })}
                     </svg>
                   )}
-                  
+
                   {/* Debug info - remove in production */}
                   {process.env.NODE_ENV === 'development' && (
                     <div className="absolute top-2 right-2 bg-black/70 text-white text-xs p-2 rounded z-10">
@@ -633,7 +657,7 @@ const ImageMapQuiz = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {selectedQuiz.regions[currentRegion].hint && (
                   <div className="mt-4 text-center text-sm text-muted-foreground">
                     Hint: {selectedQuiz.regions[currentRegion].hint}
@@ -649,14 +673,14 @@ const ImageMapQuiz = () => {
                   {score} / {total}
                 </p>
                 <p className="text-muted-foreground">
-                  {score === total ? "Perfect score! 🎉" : 
-                   score >= total * 0.7 ? "Great job! 👏" : "Keep practicing! 💪"}
+                  {score === total ? "Perfect score! 🎉" :
+                    score >= total * 0.7 ? "Great job! 👏" : "Keep practicing! 💪"}
                 </p>
               </div>
 
               {/* Show labeled image in results */}
               <div className="mt-4">
-                <img 
+                <img
                   src={`http://localhost:5000${selectedQuiz.labeledImageUrl}`}
                   alt={`${selectedQuiz.title} - Labeled`}
                   className="w-full max-w-md mx-auto rounded-lg border-2 border-primary/20"
@@ -666,7 +690,7 @@ const ImageMapQuiz = () => {
               <div className="space-y-3 max-w-md mx-auto">
                 <h3 className="font-semibold text-lg">Review Answers:</h3>
                 {selectedQuiz.regions.map((region) => (
-                  <div 
+                  <div
                     key={region.id}
                     className="flex items-center justify-between p-3 rounded-lg glass"
                   >
@@ -681,13 +705,49 @@ const ImageMapQuiz = () => {
               </div>
 
               <div className="flex gap-4 justify-center pt-4">
-                <Button 
+                <Button
                   onClick={() => setShowReview(true)}
                   className="gradient-primary"
                 >
                   Review Details
                 </Button>
-                <Button 
+                <Button
+                  onClick={async () => {
+                    try {
+                      // Share quiz
+                      const token = localStorage.getItem('token');
+                      const response = await axios.put(`http://localhost:5000/api/image-map/${selectedQuiz._id}/share`, {}, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+
+                      if (response.data.alreadyShared) {
+                        toast({
+                          title: "Already Shared",
+                          description: "This quiz is already in the community!",
+                          variant: "default",
+                        });
+                      } else {
+                        toast({
+                          title: "Shared to Community",
+                          description: "Your quiz is now visible to everyone!",
+                          variant: "default",
+                        });
+                      }
+                    } catch (err) {
+                      console.error("Error sharing quiz:", err);
+                      toast({
+                        title: "Share Failed",
+                        description: "Could not share quiz. Please try again.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  variant="outline"
+                  className="border-primary/50 text-primary hover:bg-primary/10"
+                >
+                  Share to Community
+                </Button>
+                <Button
                   onClick={resetQuiz}
                   variant="outline"
                 >
