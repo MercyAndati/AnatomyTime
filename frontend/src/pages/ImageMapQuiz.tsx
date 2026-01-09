@@ -2,8 +2,8 @@ import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Heart, Bone, Eye, ArrowLeft, CheckCircle, XCircle, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Brain, Heart, Bone, Eye, ArrowLeft, CheckCircle, XCircle, Trash2, Target, Clock, BarChart, HelpCircle } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
@@ -37,11 +37,16 @@ interface Quiz {
   labeledImageUrl: string;
 }
 
+// Get backend URL from environment variable
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 const ImageMapQuiz = () => {
-  const { id } = useParams(); // For when viewing a specific quiz
+  const { id } = useParams();
   const { toast } = useToast();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
 
   // Quiz state
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
@@ -55,66 +60,89 @@ const ImageMapQuiz = () => {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [clickedRegions, setClickedRegions] = useState<Record<string, 'correct' | 'incorrect' | null>>({});
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 });
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [scaleFactor, setScaleFactor] = useState({ x: 1, y: 1 });
 
   // Score tracking
   const [score, setScore] = useState(0);
   const [total, setTotal] = useState(0);
   const [quizStartTime, setQuizStartTime] = useState<number>(0);
+  const [timeSpent, setTimeSpent] = useState(0);
 
+  // State for preventing double clicks
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
+  // Mobile state
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Fetch all quizzes on component mount
+  // Check mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Fetch all quizzes
   useEffect(() => {
     fetchQuizzes();
   }, []);
 
+  // Timer for quiz
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (selectedQuiz && !showResults && !showReview) {
+      interval = setInterval(() => {
+        setTimeSpent(Math.floor((Date.now() - quizStartTime) / 1000));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [selectedQuiz, showResults, showReview, quizStartTime]);
+
   const fetchQuizzes = async () => {
     setLoading(true);
     try {
-      // First, try to fetch from backend
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const response = await axios.get('http://localhost:5000/api/image-map', { headers });
-      const quizzes = response.data.quizzes || [];
-      console.log('Fetched quizzes:', quizzes.length, 'quizzes');
-      quizzes.forEach((quiz: Quiz, index: number) => {
-        console.log(`Quiz ${index + 1}:`, {
-          id: quiz._id,
-          title: quiz.title,
-          regionsCount: quiz.regions?.length || 0,
-          hasRegions: !!quiz.regions && Array.isArray(quiz.regions)
-        });
-      });
-      setQuizzes(quizzes);
+      const response = await axios.get(`${BACKEND_URL}/api/image-map`, { headers });
+      setQuizzes(response.data.quizzes || []);
     } catch (error) {
       console.error('Error fetching quizzes:', error);
-      // setQuizzes([]); // Optional: clear quizzes on error if desired, but state init is [] anyway
     } finally {
       setLoading(false);
     }
   };
 
-
   // Delete quiz
   const deleteQuiz = async (e: React.MouseEvent, quizId: string) => {
-    e.stopPropagation(); // Prevent card click
-    if (!window.confirm("Are you sure you want to delete this quiz? This cannot be undone.")) {
-      return;
-    }
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this quiz? This cannot be undone.")) return;
 
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      await axios.delete(`http://localhost:5000/api/image-map/${quizId}`, {
+      await axios.delete(`${BACKEND_URL}/api/image-map/${quizId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Remove from state
       setQuizzes(prev => prev.filter(q => q._id !== quizId));
+      toast({
+        title: "Quiz deleted",
+        description: "Quiz has been removed successfully",
+      });
     } catch (error) {
       console.error('Error deleting quiz:', error);
-      alert('Failed to delete quiz');
+      toast({
+        title: "Error",
+        description: "Failed to delete quiz",
+        variant: "destructive",
+      });
     }
   };
 
@@ -128,12 +156,8 @@ const ImageMapQuiz = () => {
     return newArray;
   };
 
-  // State for preventing double clicks/transitions
-  const [isTransitioning, setIsTransitioning] = useState(false);
-
   // Start quiz
   const startQuiz = (quiz: Quiz) => {
-    // Clone and shuffle regions for randomization
     const quizCopy = { ...quiz, regions: shuffleArray(quiz.regions) };
     setSelectedQuiz(quizCopy);
     setCurrentRegion(0);
@@ -146,7 +170,12 @@ const ImageMapQuiz = () => {
     setScore(0);
     setTotal(quiz.regions.length);
     setQuizStartTime(Date.now());
+    setTimeSpent(0);
+    setImageLoaded(false);
     setIsTransitioning(false);
+    setImageSize({ width: 0, height: 0 });
+    setDisplaySize({ width: 0, height: 0 });
+    setScaleFactor({ x: 1, y: 1 });
   };
 
   // Handle region click
@@ -182,25 +211,15 @@ const ImageMapQuiz = () => {
       if (currentRegion < selectedQuiz.regions.length - 1) {
         setCurrentRegion(prev => prev + 1);
         setSelectedAnswer(null);
-        // Clear clicked regions for next question
         setClickedRegions({});
-        setIsTransitioning(false); // Enable clicks for next question
+        setIsTransitioning(false);
       } else {
-        // Pass the final state to submitQuiz because state updates are async
-        const finalGradedAnswers = {
-          ...gradedAnswers,
-          [currentQ.id]: isCorrect
-        };
-        const finalUserAnswers = {
-          ...userAnswers,
-          [currentQ.id]: regionId
-        };
-
-        // We don't reset isTransitioning here immediately because showResults will change the view
+        const finalGradedAnswers = { ...gradedAnswers, [currentQ.id]: isCorrect };
+        const finalUserAnswers = { ...userAnswers, [currentQ.id]: regionId };
         submitQuiz(finalGradedAnswers, finalUserAnswers);
         setIsTransitioning(false);
       }
-    }, 1500); // Slightly longer to see the feedback
+    }, 1200); // Reduced from 1500ms
   };
 
   // Submit quiz to backend
@@ -210,15 +229,13 @@ const ImageMapQuiz = () => {
   ) => {
     if (!selectedQuiz) return;
 
-    // Use passed final state or fallback to current state (though fallback usually misses last update)
     const answersToGrade = finalGradedAnswers || gradedAnswers;
     const answersToSubmit = finalUserAnswers || userAnswers;
 
     try {
       const token = localStorage.getItem('token');
-      const timeSpent = Math.floor((Date.now() - quizStartTime) / 1000); // Convert to seconds
+      const timeSpent = Math.floor((Date.now() - quizStartTime) / 1000);
 
-      // Calculate score locally first
       const correctCount = Object.values(answersToGrade).filter(Boolean).length;
       const localScore = correctCount;
       const localTotal = selectedQuiz.regions.length;
@@ -227,10 +244,9 @@ const ImageMapQuiz = () => {
       setTotal(localTotal);
       setShowResults(true);
 
-      // If user is logged in, submit to backend
       if (token) {
         await axios.post(
-          `http://localhost:5000/api/image-map/${selectedQuiz._id}/attempt`,
+          `${BACKEND_URL}/api/image-map/${selectedQuiz._id}/attempt`,
           {
             answers: Object.entries(answersToSubmit).map(([questionId, userAnswer]) => ({
               questionId,
@@ -239,16 +255,12 @@ const ImageMapQuiz = () => {
             timeSpent
           },
           {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
+            headers: { Authorization: `Bearer ${token}` }
           }
         );
       }
-
     } catch (error) {
       console.error('Error submitting quiz:', error);
-      // Still show results even if backend fails
       setShowResults(true);
     }
   };
@@ -259,25 +271,55 @@ const ImageMapQuiz = () => {
     startQuiz(selectedQuiz);
   };
 
+  // Handle image load
+  const handleImageLoad = () => {
+    if (!imageRef.current) return;
+    
+    const img = imageRef.current;
+    const naturalWidth = img.naturalWidth;
+    const naturalHeight = img.naturalHeight;
+    
+    // Get container dimensions
+    const container = imageContainerRef.current;
+    if (!container) return;
+    
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    
+    // Calculate scale to fit image in container while maintaining aspect ratio
+    const scaleX = containerWidth / naturalWidth;
+    const scaleY = containerHeight / naturalHeight;
+    const scale = Math.min(scaleX, scaleY);
+    
+    // Calculate displayed dimensions
+    const displayWidth = naturalWidth * scale;
+    const displayHeight = naturalHeight * scale;
+    
+    setImageSize({ width: naturalWidth, height: naturalHeight });
+    setDisplaySize({ width: displayWidth, height: displayHeight });
+    setScaleFactor({ x: scale, y: scale });
+    setImageLoaded(true);
+  };
+
+  // Recalculate on resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (imageRef.current && imageLoaded) {
+        handleImageLoad();
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [imageLoaded]);
+
   // If viewing a specific quiz by ID
   useEffect(() => {
     if (id) {
-      // Fetch specific quiz by ID
       const fetchQuizById = async () => {
         try {
-          const response = await axios.get(`http://localhost:5000/api/image-map/${id}`);
-          const quizData = response.data;
-          console.log('Fetched quiz:', {
-            id: quizData._id,
-            title: quizData.title,
-            regionsCount: quizData.regions?.length || 0,
-            regions: quizData.regions?.map((r: Region) => ({
-              id: r.id,
-              name: r.name,
-              points: r.points
-            }))
-          });
-          setSelectedQuiz(quizData);
+          const response = await axios.get(`${BACKEND_URL}/api/image-map/${id}`);
+          setSelectedQuiz(response.data);
         } catch (error) {
           console.error('Error fetching quiz by ID:', error);
         }
@@ -285,6 +327,49 @@ const ImageMapQuiz = () => {
       fetchQuizById();
     }
   }, [id]);
+
+  // Format time
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Calculate region points for display
+  const getRegionPoints = (region: Region) => {
+    if (!region.points || !scaleFactor.x || !scaleFactor.y) return null;
+    
+    try {
+      const pointsArray = region.points.split(' ').map(p => {
+        const [x, y] = p.split(',').map(Number);
+        return { x, y };
+      }).filter(p => !isNaN(p.x) && !isNaN(p.y));
+      
+      if (pointsArray.length === 0) return null;
+      
+      // Calculate bounds
+      const minX = Math.min(...pointsArray.map(p => p.x));
+      const maxX = Math.max(...pointsArray.map(p => p.x));
+      const minY = Math.min(...pointsArray.map(p => p.y));
+      const maxY = Math.max(...pointsArray.map(p => p.y));
+      
+      // Scale points for display
+      const scaledMinX = minX * scaleFactor.x;
+      const scaledMaxX = maxX * scaleFactor.x;
+      const scaledMinY = minY * scaleFactor.y;
+      const scaledMaxY = maxY * scaleFactor.y;
+      
+      // Calculate center and radius
+      const cx = (scaledMinX + scaledMaxX) / 2;
+      const cy = (scaledMinY + scaledMaxY) / 2;
+      const radius = Math.max(scaledMaxX - scaledMinX, scaledMaxY - scaledMinY) / 2;
+      
+      return { cx, cy, radius };
+    } catch (error) {
+      console.error('Error parsing region points:', error);
+      return null;
+    }
+  };
 
   // If no quiz selected, show quiz selection
   if (!selectedQuiz) {
@@ -294,21 +379,26 @@ const ImageMapQuiz = () => {
 
         <div className="container mx-auto px-4 pt-32">
           <div className="max-w-5xl mx-auto animate-fade-in">
-            <div className="text-center mb-12">
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl md:text-4xl font-bold mb-3">
                 Image Map Quizzes
               </h1>
-              <p className="text-muted-foreground text-lg">
+              <p className="text-muted-foreground text-base md:text-lg">
                 Interactive anatomical diagrams - click regions to identify structures
               </p>
             </div>
 
             {loading ? (
               <div className="text-center py-12">
-                <p>Loading quizzes...</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-4 text-muted-foreground">Loading quizzes...</p>
+              </div>
+            ) : quizzes.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No quizzes available yet</p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {quizzes.map((quiz) => {
                   let Icon = Brain;
                   switch (quiz.category.toLowerCase()) {
@@ -321,57 +411,58 @@ const ImageMapQuiz = () => {
                   return (
                     <Card
                       key={quiz._id}
-                      className="glass-card cursor-pointer hover:scale-105 transition-all duration-300 group"
+                      className="glass-card cursor-pointer hover:scale-[1.02] transition-all duration-300 group"
                       onClick={() => startQuiz(quiz)}
                     >
-                      <div className="p-6 space-y-4">
+                      <div className="p-4 md:p-6 space-y-3 md:space-y-4">
                         <div className="flex items-start justify-between">
-                          <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                            <Icon className="h-8 w-8 text-primary" />
+                          <div className="p-2 md:p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                            <Icon className="h-6 w-6 md:h-8 md:w-8 text-primary" />
                           </div>
-                          <Badge variant="outline" className="glass">
+                          <Badge variant="outline" className="glass text-xs md:text-sm">
                             {quiz.difficulty}
                           </Badge>
                         </div>
 
-                        {/* Admin delete button - simple check, ideally check token/user role */}
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-2 right-2 h-6 w-6 md:h-8 md:w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity z-10"
                           onClick={(e) => deleteQuiz(e, quiz._id)}
                           title="Delete Quiz"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                         </Button>
 
                         <div>
-                          <h3 className="text-xl font-semibold mb-2">{quiz.title}</h3>
-                          <p className="text-muted-foreground text-sm">
+                          <h3 className="text-lg md:text-xl font-semibold mb-1 md:mb-2 line-clamp-1">
+                            {quiz.title}
+                          </h3>
+                          <p className="text-muted-foreground text-xs md:text-sm line-clamp-2">
                             {quiz.description}
                           </p>
                         </div>
 
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
+                        <div className="space-y-1 md:space-y-2">
+                          <div className="flex items-center justify-between text-xs md:text-sm">
                             <span className="text-muted-foreground">Regions:</span>
                             <span>{quiz.regions?.length || 0}</span>
                           </div>
-                          <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center justify-between text-xs md:text-sm">
                             <span className="text-muted-foreground">Avg Score:</span>
                             <span>{quiz.avgScore}%</span>
                           </div>
-                          <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center justify-between text-xs md:text-sm">
                             <span className="text-muted-foreground">Plays:</span>
                             <span>{quiz.plays}</span>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t border-glass-border">
-                          <span className="text-sm text-muted-foreground">
+                        <div className="flex items-center justify-between pt-2 md:pt-3 border-t border-glass-border">
+                          <span className="text-xs md:text-sm text-muted-foreground">
                             {quiz.category}
                           </span>
-                          <Button variant="ghost" size="sm" className="group-hover:text-primary">
+                          <Button variant="ghost" size="sm" className="text-xs md:text-sm group-hover:text-primary">
                             Start →
                           </Button>
                         </div>
@@ -383,7 +474,7 @@ const ImageMapQuiz = () => {
             )}
           </div>
         </div>
-      </div >
+      </div>
     );
   }
 
@@ -393,7 +484,7 @@ const ImageMapQuiz = () => {
       <div className="min-h-screen pb-20">
         <Navigation />
 
-        <div className="container mx-auto px-4 pt-32">
+        <div className="container mx-auto px-4 pt-24 md:pt-32">
           <div className="max-w-4xl mx-auto animate-fade-in">
             <Button
               variant="ghost"
@@ -401,35 +492,36 @@ const ImageMapQuiz = () => {
                 setSelectedQuiz(null);
                 setShowReview(false);
               }}
-              className="mb-6"
+              className="mb-4 md:mb-6"
+              size={isMobile ? "sm" : "default"}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Quizzes
             </Button>
 
-            <div className="glass-card space-y-6">
+            <div className="glass-card space-y-4 md:space-y-6">
               <div className="text-center">
-                <h2 className="text-3xl font-bold mb-2">Quiz Review</h2>
-                <p className="text-muted-foreground">
+                <h2 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">Quiz Review</h2>
+                <p className="text-muted-foreground text-base md:text-lg">
                   Score: {score} / {total} ({Math.round((score / total) * 100)}%)
                 </p>
               </div>
 
               {/* Show labeled image in review mode */}
-              <div className="mt-4">
+              <div className="mt-2 md:mt-4">
                 <img
-                  src={`http://localhost:5000${selectedQuiz.labeledImageUrl}`}
+                  src={`${BACKEND_URL}${selectedQuiz.labeledImageUrl}`}
                   alt={`${selectedQuiz.title} - Labeled`}
-                  className="w-full max-w-md mx-auto rounded-lg border-2 border-primary/20"
+                  className="w-full rounded-lg border-2 border-primary/20"
                 />
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3 md:space-y-4">
                 {selectedQuiz.regions.map((region, index) => (
-                  <div key={region.id} className="glass rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold">Question {index + 1}</h3>
-                      <div className={`px-3 py-1 rounded-full text-sm ${gradedAnswers[region.id]
+                  <div key={region.id} className="glass rounded-lg md:rounded-xl p-3 md:p-4">
+                    <div className="flex items-center justify-between mb-1 md:mb-2">
+                      <h3 className="font-semibold text-base md:text-lg">Question {index + 1}</h3>
+                      <div className={`px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm ${gradedAnswers[region.id]
                         ? 'bg-green-500/20 text-green-700'
                         : 'bg-red-500/20 text-red-700'
                         }`}>
@@ -437,40 +529,43 @@ const ImageMapQuiz = () => {
                       </div>
                     </div>
 
-                    <p className="mb-2">
+                    <p className="mb-1 md:mb-2 text-sm md:text-base">
                       <strong>Question:</strong> Identify: {region.name}
                     </p>
 
-                    <div className="flex gap-4 mb-4">
+                    <div className="flex flex-col md:flex-row md:gap-4 mb-2 md:mb-4 space-y-1 md:space-y-0">
                       <div>
-                        <p className="text-sm text-muted-foreground">Your Answer:</p>
-                        <p>{userAnswers[region.id] || 'No answer'}</p>
+                        <p className="text-xs md:text-sm text-muted-foreground">Your Answer:</p>
+                        <p className="text-sm md:text-base">{userAnswers[region.id] || 'No answer'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Correct Answer:</p>
-                        <p className="font-semibold text-green-600">{region.name}</p>
+                        <p className="text-xs md:text-sm text-muted-foreground">Correct Answer:</p>
+                        <p className="text-sm md:text-base font-semibold text-green-600">{region.name}</p>
                       </div>
                     </div>
 
                     {region.description && (
-                      <div className="mt-4 p-3 bg-muted/20 rounded-lg">
-                        <p className="text-sm text-muted-foreground">{region.description}</p>
+                      <div className="mt-2 md:mt-4 p-2 md:p-3 bg-muted/20 rounded-lg">
+                        <p className="text-xs md:text-sm text-muted-foreground">{region.description}</p>
                       </div>
                     )}
                   </div>
                 ))}
               </div>
 
-              <div className="flex gap-4 justify-center">
+              <div className="flex flex-col md:flex-row gap-2 md:gap-4 justify-center pt-2 md:pt-4">
                 <Button
                   variant="outline"
                   onClick={() => setShowReview(false)}
+                  size={isMobile ? "sm" : "default"}
+                  className="md:flex-1"
                 >
                   Back to Results
                 </Button>
                 <Button
                   onClick={resetQuiz}
-                  className="gradient-primary"
+                  className="gradient-primary md:flex-1"
+                  size={isMobile ? "sm" : "default"}
                 >
                   Retake Quiz
                 </Button>
@@ -482,13 +577,13 @@ const ImageMapQuiz = () => {
     );
   }
 
-  // Main quiz taking screen
+  // Main quiz taking screen with sidebar layout
   return (
     <div className="min-h-screen pb-20">
       <Navigation />
 
-      <div className="container mx-auto px-4 pt-32">
-        <div className="max-w-4xl mx-auto animate-fade-in">
+      <div className="container mx-auto px-4 pt-24 md:pt-32">
+        <div className="animate-fade-in">
           <Button
             variant="ghost"
             onClick={() => {
@@ -496,243 +591,337 @@ const ImageMapQuiz = () => {
               setShowReview(false);
               setShowResults(false);
             }}
-            className="mb-6"
+            className="mb-4 md:mb-6"
+            size={isMobile ? "sm" : "default"}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Quizzes
           </Button>
 
           {!showResults ? (
-            <div className="glass-card space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">{selectedQuiz.title}</h2>
-                  <p className="text-muted-foreground">
-                    Question {currentRegion + 1} of {selectedQuiz.regions.length}
-                  </p>
+            <div className="flex flex-col lg:flex-row gap-4 md:gap-6">
+              {/* Sidebar - Question & Info */}
+              <div className="lg:w-80 flex-shrink-0">
+                <div className="glass-card p-4 md:p-6 sticky top-24 z-50">
+                  <div className="space-y-4 md:space-y-6">
+                    {/* Quiz Header */}
+                    <div>
+                      <h2 className="text-xl md:text-2xl font-bold mb-1 md:mb-2 line-clamp-2">
+                        {selectedQuiz.title}
+                      </h2>
+                      <div className="flex items-center justify-between">
+                        <p className="text-muted-foreground text-sm md:text-base">
+                          Question {currentRegion + 1} of {selectedQuiz.regions.length}
+                        </p>
+                        <Badge className="gradient-primary text-xs md:text-sm">
+                          Score: {Object.values(gradedAnswers).filter(Boolean).length}/{currentRegion}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Current Question */}
+                    <div className="p-3 md:p-4 bg-primary/10 rounded-lg border border-primary/20">
+                      <div className="flex items-start gap-3">
+                        <div className="bg-primary/20 p-2 rounded-full flex-shrink-0">
+                          <Target className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs md:text-sm text-muted-foreground mb-1">Find this structure:</p>
+                          <p className="text-lg md:text-xl font-bold text-primary mb-2 md:mb-3">
+                            {selectedQuiz.regions[currentRegion].name}
+                          </p>
+                          
+                          {selectedQuiz.regions[currentRegion].description && (
+                            <div className="mt-2 p-2 bg-muted/20 rounded-lg">
+                              <p className="text-xs md:text-sm text-muted-foreground">
+                                {selectedQuiz.regions[currentRegion].description}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {selectedQuiz.regions[currentRegion].hint && (
+                            <div className="mt-2 p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                              <p className="text-xs md:text-sm text-blue-600 flex items-start gap-2">
+                                <HelpCircle className="h-3 w-3 md:h-4 md:w-4 mt-0.5 flex-shrink-0" />
+                                <span>{selectedQuiz.regions[currentRegion].hint}</span>
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Time:</span>
+                        </div>
+                        <span className="font-medium">{formatTime(timeSpent)}</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <BarChart className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Accuracy:</span>
+                        </div>
+                        <span className="font-medium">
+                          {currentRegion > 0 
+                            ? `${Math.round((Object.values(gradedAnswers).filter(Boolean).length / currentRegion) * 100)}%`
+                            : '0%'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Progress */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span>{currentRegion + 1}/{selectedQuiz.regions.length}</span>
+                      </div>
+                      <div className="grid grid-cols-5 gap-1 md:gap-2">
+                        {selectedQuiz.regions.map((_, index) => (
+                          <div
+                            key={index}
+                            className={`h-1.5 md:h-2 rounded-full transition-all ${
+                              index < currentRegion
+                                ? gradedAnswers[selectedQuiz.regions[index].id]
+                                  ? 'bg-green-500'
+                                  : 'bg-red-500'
+                                : index === currentRegion
+                                ? 'bg-primary animate-pulse'
+                                : 'bg-muted'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Instructions for Mobile */}
+                    {isMobile && (
+                      <div className="p-3 bg-muted/20 rounded-lg">
+                        <p className="text-xs text-muted-foreground text-center">
+                          Tap on the highlighted areas in the image
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <Badge className="gradient-primary">
-                  Score: {Object.values(gradedAnswers).filter(Boolean).length}/{currentRegion}
-                </Badge>
               </div>
 
-              {/* Quiz taking screen with real image */}
-              <div className="p-8 bg-muted/20 rounded-xl relative">
-                <p className="text-center text-lg mb-6">
-                  Click on: <span className="font-bold text-primary">
-                    {selectedQuiz.regions[currentRegion].name}
-                  </span>
-                </p>
-
-                <div className="relative max-w-md mx-auto">
-                  {/* Display the unlabeled image */}
-                  <img
-                    src={`http://localhost:5000${selectedQuiz.imageUrl}`}
-                    alt={selectedQuiz.title}
-                    className="w-full rounded-lg"
-                    onLoad={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      const naturalWidth = img.naturalWidth;
-                      const naturalHeight = img.naturalHeight;
-                      console.log('Image loaded:', {
-                        naturalWidth,
-                        naturalHeight,
-                        displayWidth: img.width,
-                        displayHeight: img.height,
-                        regionsCount: selectedQuiz.regions?.length || 0
-                      });
-                      setImageSize({ width: naturalWidth, height: naturalHeight });
-                    }}
-                  />
-
-                  {/* SVG overlay for clickable regions */}
-                  {imageSize.width > 0 && imageSize.height > 0 && selectedQuiz.regions && selectedQuiz.regions.length > 0 && (
-                    <svg
-                      viewBox={`0 0 ${imageSize.width} ${imageSize.height}`}
-                      className="absolute top-0 left-0 w-full h-full"
-                      style={{ pointerEvents: 'all' }}
-                      preserveAspectRatio="xMidYMid meet"
-                    >
-                      {selectedQuiz.regions.map((region, index) => {
-                        if (!region.points) {
-                          console.warn(`Region ${index} (${region.name}) has no points`);
-                          return null;
-                        }
-
-                        // Parse points to validate
-                        const pointsArray = region.points.split(' ').map(p => {
-                          const [x, y] = p.split(',').map(Number);
-                          if (isNaN(x) || isNaN(y)) {
-                            console.warn(`Invalid point in region ${region.name}: ${p}`);
-                            return null;
-                          }
-                          return { x, y };
-                        }).filter(p => p !== null) as { x: number; y: number }[];
-
-                        if (pointsArray.length < 3) {
-                          console.warn(`Region ${region.name} has invalid points: ${region.points}`);
-                          return null;
-                        }
-
-                        // Check if coordinates are outside image bounds
-                        const maxX = Math.max(...pointsArray.map(p => p.x));
-                        const maxY = Math.max(...pointsArray.map(p => p.y));
-                        const minX = Math.min(...pointsArray.map(p => p.x));
-                        const minY = Math.min(...pointsArray.map(p => p.y));
-
-                        // If coordinates are way outside bounds, they might be from a scaled/zoomed view
-                        // Try to detect and scale them proportionally
-                        let scaledPoints = region.points;
-                        if (imageSize.width > 0 && imageSize.height > 0) {
-                          // Check if coordinates are significantly larger than image (likely wrong coordinate system)
-                          if (maxX > imageSize.width * 1.5 || maxY > imageSize.height * 1.5) {
-                            // Find the scale factor that would fit the coordinates
-                            const scaleX = imageSize.width / (maxX || 1);
-                            const scaleY = imageSize.height / (maxY || 1);
-                            const scale = Math.min(scaleX, scaleY);
-
-                            // Only scale if it's a reasonable scale factor (between 0.1 and 10)
-                            if (scale > 0.1 && scale < 10) {
-                              console.warn(`Region ${region.name} coordinates out of bounds. Scaling by ${scale.toFixed(2)}`);
-                              scaledPoints = pointsArray.map(p =>
-                                `${Math.round(p.x * scale)},${Math.round(p.y * scale)}`
-                              ).join(' ');
-                            }
-                          }
-                        }
-
-                        // Log first few regions for debugging
-                        if (index < 3) {
-                          console.log(`Region ${index + 1} (${region.name}):`, {
-                            points: region.points,
-                            scaledPoints: scaledPoints !== region.points ? scaledPoints : 'none',
-                            parsed: pointsArray,
-                            viewBox: `${imageSize.width} x ${imageSize.height}`,
-                            bounds: {
-                              minX, maxX, minY, maxY
-                            },
-                            needsScaling: maxX > imageSize.width || maxY > imageSize.height
-                          });
-                        }
-
-                        // Determine fill color based on state
-                        let fillColor = "rgba(255, 255, 255, 0.3)"; // Default: translucent white
-                        let strokeColor = "rgba(255, 255, 255, 0.6)";
-                        let strokeWidth = 2;
-
-                        if (clickedRegions[region.id] === 'correct') {
-                          fillColor = "rgba(34, 197, 94, 0.5)"; // Green for correct
-                          strokeColor = "rgb(34, 197, 94)";
-                          strokeWidth = 3;
-                        } else if (clickedRegions[region.id] === 'incorrect') {
-                          fillColor = "rgba(239, 68, 68, 0.5)"; // Red for incorrect
-                          strokeColor = "rgb(239, 68, 68)";
-                          strokeWidth = 3;
-                        }
-
-                        return (
-                          <polygon
-                            key={region.id || `region-${index}`}
-                            points={scaledPoints}
-                            fill={fillColor}
-                            stroke={strokeColor}
-                            strokeWidth={strokeWidth}
-                            className="cursor-pointer transition-all duration-300"
-                            onClick={() => handleRegionClick(region.id)}
-                            style={{
-                              filter: clickedRegions[region.id] ? 'drop-shadow(0 0 8px currentColor)' : 'none'
-                            }}
-                          />
-                        );
-                      })}
-                    </svg>
+              {/* Main Image Area */}
+              <div className="flex-1">
+                <div className="glass-card p-4 md:p-6 relative">
+                  {/* Mobile Question Header - Fixed at top */}
+                  {isMobile && (
+                    <div className="sticky top-20 z-40 mb-4 bg-background/80 backdrop-blur-sm rounded-lg p-3 border border-primary/20 shadow-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-primary/20 p-1.5 rounded-full">
+                          <Target className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs text-muted-foreground">Find:</p>
+                          <p className="font-bold text-primary text-sm">
+                            {selectedQuiz.regions[currentRegion].name}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {currentRegion + 1}/{selectedQuiz.regions.length}
+                        </Badge>
+                      </div>
+                    </div>
                   )}
+                  
+                  <div 
+                    ref={imageContainerRef}
+                    className="relative bg-muted/10 rounded-lg overflow-hidden flex items-center justify-center"
+                    style={{ 
+                      minHeight: isMobile ? '300px' : '500px',
+                      maxWidth: '100%'
+                    }}
+                  >
+                    {/* Loading State */}
+                    {!imageLoaded && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                          <p className="mt-4 text-muted-foreground">Loading image...</p>
+                        </div>
+                      </div>
+                    )}
 
-                  {/* Debug info - remove in production */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <div className="absolute top-2 right-2 bg-black/70 text-white text-xs p-2 rounded z-10">
-                      <div>Regions: {selectedQuiz.regions?.length || 0}</div>
-                      <div>Image: {imageSize.width} × {imageSize.height}</div>
-                      <div>ViewBox: {imageSize.width || 0} × {imageSize.height || 0}</div>
+                    {/* Main Image */}
+                    <img
+                      ref={imageRef}
+                      src={`${BACKEND_URL}${selectedQuiz.imageUrl}`}
+                      alt={selectedQuiz.title}
+                      className={`${imageLoaded ? 'block' : 'hidden'} max-w-full h-auto`}
+                      onLoad={handleImageLoad}
+                      style={{
+                        maxWidth: '100%',
+                        height: 'auto'
+                      }}
+                    />
+
+                    {/* SVG Overlay - properly scaled */}
+                    {imageLoaded && displaySize.width > 0 && selectedQuiz.regions?.length > 0 && (
+                      <svg
+                        className="absolute top-0 left-0 w-full h-full"
+                        viewBox={`0 0 ${displaySize.width} ${displaySize.height}`}
+                        style={{ 
+                          pointerEvents: isTransitioning ? 'none' : 'all',
+                          left: '50%',
+                          transform: 'translateX(-50%)'
+                        }}
+                        preserveAspectRatio="xMidYMid meet"
+                      >
+                        {selectedQuiz.regions.map((region) => {
+                          const points = getRegionPoints(region);
+                          if (!points) return null;
+
+                          // Determine colors - WHITE/TRANSPARENT for unclicked
+                          let fillColor = "rgba(255, 255, 255, 0.3)"; 
+                          let strokeColor = "rgba(255, 255, 255, 0.7)";
+                          let strokeWidth = 1;
+
+                          if (clickedRegions[region.id] === 'correct') {
+                            fillColor = "rgba(34, 197, 94, 0.5)";
+                            strokeColor = "rgb(34, 197, 94)";
+                            strokeWidth = 3;
+                          } else if (clickedRegions[region.id] === 'incorrect') {
+                            fillColor = "rgba(239, 68, 68, 0.5)";
+                            strokeColor = "rgb(239, 68, 68)";
+                            strokeWidth = 3;
+                          }
+
+                          return (
+                            <circle
+                              key={region.id}
+                              cx={points.cx}
+                              cy={points.cy}
+                              r={points.radius}
+                              fill={fillColor}
+                              stroke={strokeColor}
+                              strokeWidth={strokeWidth}
+                              className="cursor-pointer transition-all duration-300 hover:fill-white/40"
+                              onClick={() => handleRegionClick(region.id)}
+                              style={{
+                                filter: clickedRegions[region.id] 
+                                  ? 'drop-shadow(0 0 8px currentColor)' 
+                                  : 'none',
+                                cursor: isTransitioning ? 'not-allowed' : 'pointer'
+                              }}
+                            />
+                          );
+                        })}
+                      </svg>
+                    )}
+
+                    {/* Transition Overlay - Simplified */}
+                    {isTransitioning && (
+                      <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px] flex items-center justify-center transition-opacity duration-300">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="relative">
+                            {/* Simplified spinner without white background */}
+                            <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/30 border-t-white"></div>
+                            {/* Result indicator */}
+                            {clickedRegions[selectedQuiz.regions[currentRegion].id] && (
+                              <div className={`absolute inset-0 flex items-center justify-center text-2xl ${
+                                clickedRegions[selectedQuiz.regions[currentRegion].id] === 'correct' 
+                                  ? 'text-green-400' 
+                                  : 'text-red-400'
+                              }`}>
+                                {clickedRegions[selectedQuiz.regions[currentRegion].id] === 'correct' ? '✓' : '✗'}
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-white font-medium text-sm">
+                            {clickedRegions[selectedQuiz.regions[currentRegion].id] === 'correct' 
+                              ? 'Correct!' 
+                              : 'Incorrect'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mobile Instructions */}
+                  {isMobile && (
+                    <div className="mt-4 p-3 bg-primary/5 rounded-lg">
+                      <p className="text-xs text-center text-muted-foreground">
+                        💡 Tap on the highlighted areas to select your answer
+                      </p>
                     </div>
                   )}
                 </div>
-
-                {selectedQuiz.regions[currentRegion].hint && (
-                  <div className="mt-4 text-center text-sm text-muted-foreground">
-                    Hint: {selectedQuiz.regions[currentRegion].hint}
-                  </div>
-                )}
               </div>
             </div>
           ) : (
-            <div className="glass-card space-y-6 text-center">
+            // Results Section
+            <div className="glass-card space-y-4 md:space-y-6 text-center">
               <div className="space-y-2">
-                <h2 className="text-3xl font-bold">Quiz Complete!</h2>
-                <p className="text-5xl font-bold gradient-text my-6">
+                <h2 className="text-2xl md:text-3xl font-bold">Quiz Complete!</h2>
+                <p className="text-4xl md:text-5xl font-bold gradient-text my-4 md:my-6">
                   {score} / {total}
                 </p>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-base md:text-lg">
                   {score === total ? "Perfect score! 🎉" :
                     score >= total * 0.7 ? "Great job! 👏" : "Keep practicing! 💪"}
                 </p>
+                <p className="text-sm text-muted-foreground">
+                  Time: {formatTime(timeSpent)} • Accuracy: {Math.round((score / total) * 100)}%
+                </p>
               </div>
 
-              {/* Show labeled image in results */}
-              <div className="mt-4">
+              {/* Show labeled image */}
+              <div className="mt-2 md:mt-4">
                 <img
-                  src={`http://localhost:5000${selectedQuiz.labeledImageUrl}`}
+                  src={`${BACKEND_URL}${selectedQuiz.labeledImageUrl}`}
                   alt={`${selectedQuiz.title} - Labeled`}
                   className="w-full max-w-md mx-auto rounded-lg border-2 border-primary/20"
                 />
               </div>
 
-              <div className="space-y-3 max-w-md mx-auto">
-                <h3 className="font-semibold text-lg">Review Answers:</h3>
+              <div className="space-y-2 md:space-y-3 max-w-md mx-auto">
+                <h3 className="font-semibold text-lg md:text-xl">Review Answers:</h3>
                 {selectedQuiz.regions.map((region) => (
                   <div
                     key={region.id}
                     className="flex items-center justify-between p-3 rounded-lg glass"
                   >
-                    <span>{region.name}</span>
+                    <span className="text-sm md:text-base">{region.name}</span>
                     {gradedAnswers[region.id] ? (
-                      <CheckCircle className="h-5 w-5 text-success" />
+                      <CheckCircle className="h-4 w-4 md:h-5 md:w-5 text-success" />
                     ) : (
-                      <XCircle className="h-5 w-5 text-destructive" />
+                      <XCircle className="h-4 w-4 md:h-5 md:w-5 text-destructive" />
                     )}
                   </div>
                 ))}
               </div>
 
-              <div className="flex gap-4 justify-center pt-4">
+              <div className="flex flex-col md:flex-row gap-2 md:gap-4 justify-center pt-2 md:pt-4">
                 <Button
                   onClick={() => setShowReview(true)}
                   className="gradient-primary"
+                  size={isMobile ? "sm" : "default"}
                 >
                   Review Details
                 </Button>
                 <Button
                   onClick={async () => {
                     try {
-                      // Share quiz
                       const token = localStorage.getItem('token');
-                      const response = await axios.put(`http://localhost:5000/api/image-map/${selectedQuiz._id}/share`, {}, {
+                      if (!token) return;
+                      
+                      await axios.put(`${BACKEND_URL}/api/image-map/${selectedQuiz._id}/share`, {}, {
                         headers: { Authorization: `Bearer ${token}` }
                       });
-
-                      if (response.data.alreadyShared) {
-                        toast({
-                          title: "Already Shared",
-                          description: "This quiz is already in the community!",
-                          variant: "default",
-                        });
-                      } else {
-                        toast({
-                          title: "Shared to Community",
-                          description: "Your quiz is now visible to everyone!",
-                          variant: "default",
-                        });
-                      }
+                      
+                      toast({
+                        title: "Shared to Community",
+                        description: "Your quiz is now visible to everyone!",
+                      });
                     } catch (err) {
                       console.error("Error sharing quiz:", err);
                       toast({
@@ -744,23 +933,16 @@ const ImageMapQuiz = () => {
                   }}
                   variant="outline"
                   className="border-primary/50 text-primary hover:bg-primary/10"
+                  size={isMobile ? "sm" : "default"}
                 >
                   Share to Community
                 </Button>
                 <Button
                   onClick={resetQuiz}
                   variant="outline"
+                  size={isMobile ? "sm" : "default"}
                 >
                   Retake Quiz
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedQuiz(null);
-                    setShowResults(false);
-                  }}
-                >
-                  Choose Another Quiz
                 </Button>
               </div>
             </div>

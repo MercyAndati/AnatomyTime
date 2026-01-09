@@ -34,7 +34,7 @@ const App = () => (
             <Route path="/image-map/:id" element={<ImageMapQuiz />} />
             <Route path="/community" element={<Community />} />
             <Route
-              path="/admin-image-map"
+              path="/admin"
               element={
                 <ProtectedRoute adminOnly>
                   <AdminWithPicker />
