@@ -19,7 +19,8 @@ interface CommunityPost {
   id: string;
   author: string;
   title: string;
-  type: string;
+  type: string; // Backend type (e.g., 'image_map_share')
+  typeDisplay?: string; // Display type (e.g., 'Image Map')
   likes: number;
   comments: number;
   downloads: number;
@@ -27,6 +28,7 @@ interface CommunityPost {
   description: string;
   questionCount: number;
   alreadyShared?: boolean;
+  resourceId?: string;
 }
 
 interface Category {
@@ -87,9 +89,18 @@ const Community = () => {
         // Count "All"
         newCategories[0].count = fetchedPosts.length;
 
+        // Map backend types to frontend category names
+        const typeToCategoryMap: { [key: string]: string } = {
+          'quiz_share': 'Quiz',
+          'flashcard_share': 'Flashcards',
+          'image_map_share': 'Image Map',
+          'note': 'Notes'
+        };
+
         // Count others
         fetchedPosts.forEach((p: CommunityPost) => {
-          const cat = newCategories.find(c => c.name === p.type);
+          const categoryName = typeToCategoryMap[p.type] || p.type;
+          const cat = newCategories.find(c => c.name === categoryName);
           if (cat) cat.count++;
         });
 
@@ -325,25 +336,43 @@ const Community = () => {
                           title="Remove from Community (Admin/Owner)"
                           onClick={async (e) => {
                             e.stopPropagation();
-                            if (!confirm("Remove this quiz from the community?")) return;
+                            if (!confirm("Remove this from the community?")) return;
                             try {
                               const token = localStorage.getItem('token');
-                              await axios.put(`http://localhost:5000/api/image-map/${post.id}/unshare`, {}, {
+                              if (!token) {
+                                toast({ variant: "destructive", title: "Error", description: "Please login to remove posts." });
+                                return;
+                              }
+                              
+                              // Use the community delete endpoint
+                              await axios.delete(`http://localhost:5000/api/community/${post.id}`, {
                                 headers: { Authorization: `Bearer ${token}` }
                               });
-                              toast({ title: "Removed", description: "Quiz removed from community." });
+                              
+                              toast({ title: "Removed", description: "Post removed from community." });
+                              
                               // Remove from local state
                               setPosts(prev => prev.filter(p => p.id !== post.id));
-                              // Update counts
+                              
+                              // Update counts - map backend type to frontend category
+                              const typeToCategoryMap: { [key: string]: string } = {
+                                'quiz_share': 'Quiz',
+                                'flashcard_share': 'Flashcards',
+                                'image_map_share': 'Image Map',
+                                'note': 'Notes'
+                              };
+                              const categoryName = typeToCategoryMap[post.type] || post.type;
+                              
                               setCategories(prev => prev.map(c => {
-                                if (c.name === "All" || c.name === post.type) {
+                                if (c.name === "All" || c.name === categoryName) {
                                   return { ...c, count: Math.max(0, c.count - 1) };
                                 }
                                 return c;
                               }));
-                            } catch (err) {
+                            } catch (err: any) {
                               console.error("Failed to remove:", err);
-                              toast({ variant: "destructive", title: "Action Failed", description: "You are not authorized to remove this." });
+                              const errorMessage = err.response?.data?.message || "You are not authorized to remove this.";
+                              toast({ variant: "destructive", title: "Action Failed", description: errorMessage });
                             }
                           }}
                         >
@@ -353,7 +382,7 @@ const Community = () => {
                         <h3 className="text-xl font-semibold mb-2">{post.title}</h3>
 
                         <div className="inline-flex items-center gap-2 glass rounded-full px-3 py-1 text-sm">
-                          <span className="text-primary font-medium">{post.type}</span>
+                          <span className="text-primary font-medium">{post.typeDisplay || post.type}</span>
                         </div>
                       </div>
                     </div>
@@ -370,9 +399,10 @@ const Community = () => {
                           try {
                             const token = localStorage.getItem('token');
                             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-                            const endpoint = post.type === 'Image Map'
-                              ? `http://localhost:5000/api/image-map/${post.id}/like`
-                              : `http://localhost:5000/api/quiz/${post.id}/like`;
+                            // Use backend type for API calls
+                            const endpoint = post.type === 'image_map_share'
+                              ? `http://localhost:5000/api/image-map/${post.resourceId || post.id}/like`
+                              : `http://localhost:5000/api/quiz/${post.resourceId || post.id}/like`;
                             
                             await axios.post(endpoint, {}, { headers });
                           } catch (err) {
@@ -401,9 +431,9 @@ const Community = () => {
                         Preview
                       </button>
 
-                      {post.type === 'Image Map' ? (
+                      {post.type === 'image_map_share' ? (
                         <button
-                          onClick={() => navigate(`/image-map/${post.id}`)}
+                          onClick={() => navigate(`/image-map/${post.resourceId || post.id}`)}
                           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors ml-auto"
                         >
                           <Play className="h-4 w-4" />
@@ -433,7 +463,7 @@ const Community = () => {
           <DialogHeader>
             <DialogTitle>{previewPost?.title}</DialogTitle>
             <DialogDescription>
-              Preview of {previewPost?.type} by {previewPost?.author}
+              Preview of {previewPost?.typeDisplay || previewPost?.type} by {previewPost?.author}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -444,7 +474,7 @@ const Community = () => {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Type:</span>
-                  <span className="font-medium">{previewPost?.type}</span>
+                  <span className="font-medium">{previewPost?.typeDisplay || previewPost?.type}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Author:</span>
@@ -452,10 +482,10 @@ const Community = () => {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    {previewPost?.type === 'Image Map' || previewPost?.type === 'Quiz' ? 'Questions:' : 'Downloads:'}
+                    {previewPost?.type === 'image_map_share' || previewPost?.type === 'quiz_share' ? 'Questions:' : 'Downloads:'}
                   </span>
                   <span className="font-medium">
-                    {previewPost?.type === 'Image Map' || previewPost?.type === 'Quiz'
+                    {previewPost?.type === 'image_map_share' || previewPost?.type === 'quiz_share'
                       ? previewPost?.questionCount
                       : previewPost?.downloads}
                   </span>
@@ -470,10 +500,10 @@ const Community = () => {
               <Button variant="outline" onClick={() => setPreviewPost(null)} className="flex-1">
                 Close
               </Button>
-              {previewPost?.type === 'Image Map' ? (
+              {previewPost?.type === 'image_map_share' ? (
                 <Button
                   onClick={() => {
-                    navigate(`/image-map/${previewPost.id}`);
+                    navigate(`/image-map/${previewPost.resourceId || previewPost.id}`);
                     setPreviewPost(null);
                   }}
                   className="gradient-primary flex-1"

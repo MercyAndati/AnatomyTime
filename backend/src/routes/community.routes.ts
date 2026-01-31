@@ -1,10 +1,28 @@
 import express from 'express';
+import jwt from 'jsonwebtoken';
 import Quiz from '../models/Quiz';
 import ImageMapQuiz from '../models/ImageMapQuiz';
 import FlashcardSet from '../models/FlashCardSet';
 import CommunityPost from '../models/CommunityPost';
+import User from '../models/User';
 
 const router = express.Router();
+
+// Middleware to verify token
+const verifyToken = (req: any, res: any, next: any) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+    req.userId = decoded.userId;
+    next();
+  } catch (error) {
+    res.status(401).json({ message: 'Invalid token' });
+  }
+};
 
 // Get community posts (aggregated from CommunityPost collection)
 router.get('/', async (req, res) => {
@@ -42,13 +60,22 @@ router.get('/', async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(50);
 
+    // Map backend types to frontend display types
+    const typeDisplayMap: { [key: string]: string } = {
+      'quiz_share': 'Quiz',
+      'flashcard_share': 'Flashcards',
+      'image_map_share': 'Image Map',
+      'note': 'Notes'
+    };
+
     // Transform to frontend format
     const transformedPosts = posts.map(post => {
       let baseData = {
         id: post._id,
         author: (post.sharedBy as any)?.name || 'Unknown',
         title: post.title,
-        type: post.type,
+        type: post.type, // Keep original type for backend operations
+        typeDisplay: typeDisplayMap[post.type] || post.type, // Display-friendly type
         likes: post.upvotes || 0,
         comments: post.comments?.length || 0,
         createdAt: post.createdAt,
@@ -177,6 +204,68 @@ router.post('/share', async (req, res) => {
 
   } catch (error) {
     console.error('Share to community error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete a community post (admin or owner)
+router.delete('/:id', verifyToken, async (req: any, res) => {
+  try {
+    const post = await CommunityPost.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Check if user is owner or admin
+    const user = await User.findById(req.userId);
+    const isOwner = post.sharedBy.toString() === req.userId;
+    const isAdmin = user?.isAdmin || false;
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Not authorized to delete this post' });
+    }
+
+    // Get the resource type and ID before deleting
+    let resourceId: string | null = null;
+    let resourceType: string = '';
+    
+    if (post.quizId) {
+      resourceId = post.quizId.toString();
+      resourceType = 'quiz';
+    } else if (post.flashcardSetId) {
+      resourceId = post.flashcardSetId.toString();
+      resourceType = 'flashcard';
+    } else if (post.imageMapQuizId) {
+      resourceId = post.imageMapQuizId.toString();
+      resourceType = 'imageMap';
+    }
+
+    // Delete the community post
+    await CommunityPost.deleteOne({ _id: post._id });
+
+    // Optionally make the resource private again (only if admin is deleting)
+    if (isAdmin && resourceId) {
+      switch (resourceType) {
+        case 'quiz':
+          await Quiz.findByIdAndUpdate(resourceId, { isPublic: false });
+          break;
+        case 'flashcard':
+          await FlashcardSet.findByIdAndUpdate(resourceId, { isPublic: false });
+          break;
+        case 'imageMap':
+          await ImageMapQuiz.findByIdAndUpdate(resourceId, { isPublic: false });
+          break;
+      }
+    }
+
+    res.json({ 
+      message: 'Community post deleted successfully',
+      resourceId,
+      resourceType
+    });
+
+  } catch (error) {
+    console.error('Delete community post error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

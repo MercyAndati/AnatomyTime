@@ -780,9 +780,9 @@ const ImageMapQuiz = () => {
                           const points = getRegionPoints(region);
                           if (!points) return null;
 
-                          // Determine colors - WHITE/TRANSPARENT for unclicked
-                          let fillColor = "rgba(255, 255, 255, 0.3)"; 
-                          let strokeColor = "rgba(255, 255, 255, 0.7)";
+                          // Determine colors - CYAN/TRANSPARENT for unclicked
+                          let fillColor = "rgba(123, 231, 245, 0.3)"; 
+                          let strokeColor = "rgba(102, 243, 243, 0.7)";
                           let strokeWidth = 1;
 
                           if (clickedRegions[region.id] === 'correct') {

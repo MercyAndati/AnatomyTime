@@ -79,10 +79,10 @@ const AdminWithPicker = () => {
         const imgUrl = e.target?.result as string;
         setPreviewImage(imgUrl);
         
-        // Get image dimensions
+        // Get image dimensions - use naturalWidth/naturalHeight for actual file dimensions
         const img = new Image();
         img.onload = () => {
-          setImageDimensions({ width: img.width, height: img.height });
+          setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
         };
         img.src = imgUrl;
       };
