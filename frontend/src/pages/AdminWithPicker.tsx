@@ -354,13 +354,20 @@ const AdminWithPicker = () => {
     if (unlabeledInputRef.current) unlabeledInputRef.current.value = "";
     if (labeledInputRef.current) labeledInputRef.current.value = "";
     
-  } catch (error: any) {
-    console.error('Submission error:', error);
-    toast({
-      title: "Error",
-      description: error.message || "Failed to create quiz",
-      variant: "destructive",
-    });
+  } catch (error: unknown) {
+  let errorMessage = "Failed to create quiz";
+  if (error instanceof Error) {
+    errorMessage = error.message;
+  } else if (typeof error === 'string') {
+    errorMessage = error;
+  }
+  
+  console.error('Submission error:', error);
+  toast({
+    title: "Error",
+    description: errorMessage,
+    variant: "destructive",
+  });
   } finally {
     setIsCreating(false);
   }

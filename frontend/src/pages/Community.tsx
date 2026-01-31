@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
@@ -10,23 +10,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Heart, MessageCircle, Download, Search, Plus, FileText, Brain, Zap, Map, Eye, Play, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import axios from "axios";
 
+// Define TypeScript interfaces
 type CategoryType = "All" | "Quiz" | "Flashcards" | "Notes" | "Image Map";
 
-import axios from "axios";
+interface CommunityPost {
+  id: string;
+  author: string;
+  title: string;
+  type: string;
+  likes: number;
+  comments: number;
+  downloads: number;
+  createdAt: string;
+  description: string;
+  questionCount: number;
+  alreadyShared?: boolean;
+}
+
+interface Category {
+  name: CategoryType;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  count: number;
+}
 
 const Community = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>("All");
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [previewPost, setPreviewPost] = useState<any>(null);
+  const [previewPost, setPreviewPost] = useState<CommunityPost | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    fetchPosts();
-  }, [selectedCategory]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -40,7 +56,7 @@ const Community = () => {
     return date.toLocaleDateString();
   };
 
-  const [categories, setCategories] = useState<{ name: CategoryType; icon: any; count: number }[]>([
+  const [categories, setCategories] = useState<Category[]>([
     { name: "All", icon: FileText, count: 0 },
     { name: "Quiz", icon: Brain, count: 0 },
     { name: "Flashcards", icon: Zap, count: 0 },
@@ -48,32 +64,31 @@ const Community = () => {
     { name: "Image Map", icon: Map, count: 0 },
   ]);
 
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      // If "All", fetch everything to calculate counts
       const response = await axios.get(`http://localhost:5000/api/community`, {
         params: { category: selectedCategory === "All" ? undefined : selectedCategory }
       });
 
-      const fetchedPosts = response.data.posts;
+      const fetchedPosts: CommunityPost[] = response.data.posts;
       setPosts(fetchedPosts);
 
       // Update counts if fetching "All"
       if (selectedCategory === "All") {
-        const newCategories = [
+        const newCategories: Category[] = [
           { name: "All", icon: FileText, count: 0 },
           { name: "Quiz", icon: Brain, count: 0 },
           { name: "Flashcards", icon: Zap, count: 0 },
           { name: "Notes", icon: FileText, count: 0 },
           { name: "Image Map", icon: Map, count: 0 },
-        ] as { name: CategoryType; icon: any; count: number }[];
+        ];
 
         // Count "All"
         newCategories[0].count = fetchedPosts.length;
 
         // Count others
-        fetchedPosts.forEach((p: any) => {
+        fetchedPosts.forEach((p: CommunityPost) => {
           const cat = newCategories.find(c => c.name === p.type);
           if (cat) cat.count++;
         });
@@ -86,14 +101,13 @@ const Community = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCategory]);
 
-  // Placeholder data - will be replaced with real data from backend
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
 
-
-
-
-  const handleShare = (formData: any) => {
+  const handleShare = (formData: Record<string, string>) => {
     console.log("Sharing content:", formData);
     toast({
       title: "Content Shared!",
@@ -102,7 +116,7 @@ const Community = () => {
     setIsShareOpen(false);
   };
 
-  const handleDownload = (post: any) => {
+  const handleDownload = (post: CommunityPost) => {
     toast({
       title: "Download Started",
       description: `Downloading "${post.title}"...`,
@@ -142,7 +156,11 @@ const Community = () => {
                 <form onSubmit={(e) => {
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
-                  handleShare(Object.fromEntries(formData));
+                  const data: Record<string, string> = {};
+                  formData.forEach((value, key) => {
+                    data[key] = value.toString();
+                  });
+                  handleShare(data);
                 }} className="space-y-4 pt-4">
                   <div className="space-y-2">
                     <Label htmlFor="title">Title</Label>
@@ -354,11 +372,8 @@ const Community = () => {
                             const headers = token ? { Authorization: `Bearer ${token}` } : {};
                             const endpoint = post.type === 'Image Map'
                               ? `http://localhost:5000/api/image-map/${post.id}/like`
-                              : `http://localhost:5000/api/quiz/${post.id}/vote`; // Standard quiz often uses vote or like. Checking conventions...
-                            // Actually, standard Quiz might just use /api/quiz/:id/like if implemented.
-                            // I'll stick to ImageMap for now or safe check.
-                            // Safe bet default:
-
+                              : `http://localhost:5000/api/quiz/${post.id}/like`;
+                            
                             await axios.post(endpoint, {}, { headers });
                           } catch (err) {
                             // Revert
@@ -469,7 +484,7 @@ const Community = () => {
               ) : (
                 <Button
                   onClick={() => {
-                    handleDownload(previewPost);
+                    handleDownload(previewPost!);
                     setPreviewPost(null);
                   }}
                   className="gradient-primary flex-1"
@@ -482,7 +497,7 @@ const Community = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div >
+    </div>
   );
 };
 

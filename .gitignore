@@ -172,7 +172,7 @@ mongodb-data/
 # Redis
 dump.rdb
 
-# Project-specific (Backend)
+# Project-specific 
 backend/dist/
 backend/.env*
 backend/coverage/

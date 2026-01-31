@@ -909,34 +909,81 @@ const ImageMapQuiz = () => {
                   Review Details
                 </Button>
                 <Button
-                  onClick={async () => {
-                    try {
-                      const token = localStorage.getItem('token');
-                      if (!token) return;
-                      
-                      await axios.put(`${BACKEND_URL}/api/image-map/${selectedQuiz._id}/share`, {}, {
-                        headers: { Authorization: `Bearer ${token}` }
+                onClick={async () => {
+                  try {
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                      toast({
+                        title: "Login Required",
+                        description: "Please login to share quizzes",
+                        variant: "destructive",
                       });
-                      
+                      return;
+                    }
+                    
+                    // Get user from localStorage
+                    const userData = localStorage.getItem('user');
+                    if (!userData) {
+                      toast({
+                        title: "Login Required",
+                        description: "Please login to share quizzes",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
+                    const user = JSON.parse(userData);
+                    const userId = user._id || user.id;
+                    
+                    if (!userId) {
+                      toast({
+                        title: "Error",
+                        description: "Unable to get user information",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
+                    // Call the NEW community sharing endpoint
+                    const response = await axios.post(
+                      `${BACKEND_URL}/api/community/share`,
+                      {
+                        type: 'image_map_share',
+                        resourceId: selectedQuiz._id,
+                        title: `Image Map: ${selectedQuiz.title}`,
+                        sharedBy: userId
+                      },
+                      {
+                        headers: { Authorization: `Bearer ${token}` }
+                      }
+                    );
+                    
+                    if (response.data.alreadyShared) {
+                      toast({
+                        title: "Already Shared",
+                        description: "This quiz is already in the community",
+                      });
+                    } else {
                       toast({
                         title: "Shared to Community",
                         description: "Your quiz is now visible to everyone!",
                       });
-                    } catch (err) {
-                      console.error("Error sharing quiz:", err);
-                      toast({
-                        title: "Share Failed",
-                        description: "Could not share quiz. Please try again.",
-                        variant: "destructive",
-                      });
                     }
-                  }}
-                  variant="outline"
-                  className="border-primary/50 text-primary hover:bg-primary/10"
-                  size={isMobile ? "sm" : "default"}
-                >
-                  Share to Community
-                </Button>
+                  } catch (err) {
+                    console.error("Error sharing quiz:", err);
+                    toast({
+                      title: "Share Failed",
+                      description: "Could not share quiz. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                variant="outline"
+                className="border-primary/50 text-primary hover:bg-primary/10"
+                size={isMobile ? "sm" : "default"}
+              >
+                Share to Community
+              </Button>
                 <Button
                   onClick={resetQuiz}
                   variant="outline"
