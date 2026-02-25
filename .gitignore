@@ -207,7 +207,6 @@ wandb/
 .ipynb_checkpoints
 
 # Temporary uploads (if you have upload functionality)
-uploads/
 temp-uploads/
 
 # Docker

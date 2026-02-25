@@ -270,4 +270,23 @@ router.delete('/:id', verifyToken, async (req: any, res) => {
   }
 });
 
+// Like a community post
+router.post('/:id/like', verifyToken, async (req: any, res) => {
+  try {
+    const post = await CommunityPost.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Optional: prevent duplicate likes per user in future using post.upvotedBy
+    post.upvotes += 1;
+    await post.save();
+
+    res.json({ likes: post.upvotes });
+  } catch (error) {
+    console.error('Like community post error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 export default router;

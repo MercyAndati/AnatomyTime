@@ -1,3 +1,4 @@
+// backend/src/models/QuizAttempt.ts
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IAnswer {
@@ -13,14 +14,13 @@ export interface IAnswer {
 
 export interface IQuizAttempt extends Document {
   user: mongoose.Types.ObjectId;
-  //Polymorphic refrenceEL can be a quiz of imagemap quiz
-  quizref: mongoose.Types.ObjectId;
-  quizType:'ai-quiz' | 'image-map-quiz';
+  quizRef: mongoose.Types.ObjectId;
+  quizType: 'ai-quiz' | 'image-map-quiz';
   score: number;
   totalPoints: number;
   percentage: number;
   timeSpent: number;
-  timeLimit?:number;
+  timeLimit?: number;
   answers: IAnswer[];
   status: 'in-progress' | 'grading' | 'completed' | 'time-up'|'failed';
   gradingStartedAt?: Date;
@@ -45,10 +45,9 @@ const quizAttemptSchema = new Schema<IQuizAttempt>({
     ref: 'User',
     required: true
   },
-  quizref: {
+  quizRef: {
     type: Schema.Types.ObjectId,
     required: true,
-    // Note: Can't use 'ref' because it's polymorphic
   },
   quizType: {
     type: String,
@@ -59,7 +58,7 @@ const quizAttemptSchema = new Schema<IQuizAttempt>({
   totalPoints: { type: Number, required: true },
   percentage: { type: Number, default: 0 },
   timeSpent: { type: Number, default: 0 },
-  timeLimit: Number, // NEW: for rapid-fire tracking
+  timeLimit: Number,
   answers: [answerSchema],
   status: {
     type: String,
@@ -73,13 +72,11 @@ const quizAttemptSchema = new Schema<IQuizAttempt>({
   timestamps: true
 });
 
-// Calculate percentage automatically
-// @ts-expect-error - Mongoose 9 types don't properly recognize 'save' as a valid hook event
-quizAttemptSchema.pre('save', function(this: IQuizAttempt, next: () => void) {
+// Fix: Calculate percentage without next parameter
+quizAttemptSchema.pre('save', function() {
   if (this.totalPoints > 0) {
     this.percentage = Math.round((this.score / this.totalPoints) * 100);
   }
-  next();
 });
 
 export default mongoose.model<IQuizAttempt>('QuizAttempt', quizAttemptSchema);

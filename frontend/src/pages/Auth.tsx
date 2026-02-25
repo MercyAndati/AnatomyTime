@@ -189,13 +189,6 @@ const Auth = () => {
               Back to Home
             </Button>
           </div>
-          
-          {/* Admin credentials for development */}
-          <div className="mt-4 text-center">
-            <p className="text-xs text-muted-foreground">
-              For testing: admin@anatomyai.com / admin123
-            </p>
-          </div>
         </div>
       </div>
     </div>

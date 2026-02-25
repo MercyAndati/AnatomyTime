@@ -1,5 +1,6 @@
+// frontend/src/components/Navigation.tsx
 import { useState, useEffect } from "react";
-import { Brain, FileText, Zap, Users, Map, Menu, User, LogOut } from "lucide-react";
+import { Brain, FileText, Zap, Users, Map, Menu, User, LogOut, LayoutDashboard } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -21,13 +22,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { User as UserType } from "@/types";
 
 export function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserType | null>(null);
 
   useEffect(() => {
     // Check if user is logged in
@@ -93,6 +95,7 @@ export function Navigation() {
     return 'U';
   };
 
+  // Base navigation links for all users
   const navLinks = [
     { to: "/quiz", icon: FileText, label: "Quiz" },
     { to: "/flashcards", icon: FileText, label: "Flashcards" },
@@ -100,6 +103,11 @@ export function Navigation() {
     { to: "/image-map", icon: Map, label: "Image Map" },
     { to: "/community", icon: Users, label: "Community" },
   ];
+
+  // Add dashboard link only for logged in users
+  const allNavLinks = user 
+    ? [{ to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" }, ...navLinks]
+    : navLinks;
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-glass-border">
@@ -132,7 +140,7 @@ export function Navigation() {
                   </p>
                 </SheetHeader>
                 <nav className="flex flex-col py-4">
-                  {navLinks.map((link) => {
+                  {allNavLinks.map((link) => {
                     const Icon = link.icon;
                     return (
                       <NavLink
@@ -203,7 +211,7 @@ export function Navigation() {
 
           {/* Center - Desktop Navigation Links */}
           <div className="hidden lg:flex items-center gap-8 absolute left-1/2 transform -translate-x-1/2">
-            {navLinks.map((link) => {
+            {allNavLinks.map((link) => {
               const Icon = link.icon;
               return (
                 <NavLink
@@ -256,15 +264,19 @@ export function Navigation() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </DropdownMenuItem>
                   {user.isAdmin && (
                     <>
                       <DropdownMenuItem onClick={() => navigate("/admin")}>
                         <User className="mr-2 h-4 w-4" />
                         Admin Panel
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
                     </>
                   )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>

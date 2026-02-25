@@ -1,18 +1,23 @@
+// frontend/src/pages/Quiz.tsx
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Sparkles, X } from "lucide-react";
+import { Upload, X, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { api } from "@/utils/api";
 
 const Quiz = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState("");
   const [numQuestions, setNumQuestions] = useState("10");
   const [difficulty, setDifficulty] = useState("standard");
-  const [questionType, setQuestionType] = useState("multiple-choice");
+  const [questionType, setQuestionType] = useState("mixed");
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,30 +40,6 @@ const Quiz = () => {
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) {
-      if (droppedFile.size > 10 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "Please upload a file smaller than 10MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      setFile(droppedFile);
-      toast({
-        title: "File uploaded",
-        description: droppedFile.name,
-      });
-    }
-  };
-
   const removeFile = () => {
     setFile(null);
     if (fileInputRef.current) {
@@ -66,107 +47,145 @@ const Quiz = () => {
     }
   };
 
+  const handleGenerate = async () => {
+    // Validate input
+    if (!description && !file) {
+      toast({
+        title: "Missing information",
+        description: "Please enter a topic or upload a file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      let response;
+
+      if (file) {
+        // Generate from file
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('numQuestions', numQuestions);
+        formData.append('difficulty', difficulty);
+        
+        response = await api.generateQuizFromFile(formData);
+      } else {
+        // Generate from topic
+        response = await api.generateQuiz({
+          prompt: description,
+          numQuestions: parseInt(numQuestions),
+          difficulty,
+        });
+      }
+
+      toast({
+        title: "Success!",
+        description: response.message,
+      });
+
+      // Navigate to the quiz taking page
+      navigate(`/quiz/${response.quiz.id}`);
+
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate quiz",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen pb-20">
       <Navigation />
       
-      <div className="container mx-auto px-4 pt-32">
-        <div className="max-w-3xl mx-auto animate-fade-in">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Create Your Quiz
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              Upload your study materials or describe what you want to learn
-            </p>
-          </div>
+      <div className="container mx-auto px-4 pt-24 max-w-3xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Create Your Quiz</h1>
+          <p className="text-muted-foreground mt-1">
+            Upload your study materials or describe what you want to learn
+          </p>
+        </div>
 
-          <div className="glass-card space-y-6">
-            {/* File Upload */}
-            <div className="space-y-2">
-              <Label>Upload Study Materials (Optional)</Label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileChange}
-                accept=".pdf,.docx,.txt,.jpg,.jpeg,.png"
-                className="hidden"
-              />
+        <div className="space-y-6">
+          {/* File Upload */}
+          <div className="border rounded-lg p-6 bg-card">
+            <h2 className="text-sm font-medium mb-3">Upload study materials (Optional)</h2>
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileChange}
+              accept=".pdf,.docx,.txt"
+              className="hidden"
+            />
+            
+            {file ? (
+              <div className="flex items-center justify-between p-3 bg-muted rounded-md">
+                <span className="text-sm truncate">{file.name}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={removeFile}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                className="border-2 border-dashed border-glass-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer glass"
+                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
               >
-                {file ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <p className="text-sm font-medium">{file.name}</p>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeFile();
-                      }}
-                      className="h-6 w-6"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Click to upload or drag and drop
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      PDF, DOCX, TXT, or images (Max 10MB)
-                    </p>
-                  </>
-                )}
+                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm font-medium mb-1">Click to upload or drag and drop</p>
+                <p className="text-xs text-muted-foreground">PDF, DOCX, TXT (Max 10MB)</p>
               </div>
-            </div>
+            )}
+          </div>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-glass-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or</span>
-              </div>
+          {/* OR Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
             </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Describe Your Topic</Label>
-              <Textarea
-                id="description"
-                placeholder="E.g., 'Create a quiz about the muscular system, focusing on major muscle groups and their functions'"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="glass min-h-[120px]"
-              />
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">OR</span>
             </div>
+          </div>
 
-            {/* Quiz Settings */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="numQuestions">Number of Questions</Label>
+          {/* Topic Description */}
+          <div className="border rounded-lg p-6 bg-card">
+            <h2 className="text-sm font-medium mb-3">Describe Your Topic</h2>
+            <Textarea
+              placeholder="E.g., 'Create a quiz about the muscular system, focus on major groups and their function'"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="min-h-[100px]"
+            />
+          </div>
+
+          {/* Quiz Settings Grid */}
+          <div className="border rounded-lg p-6 bg-card">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label className="text-sm">Number of Questions</Label>
                 <Input
-                  id="numQuestions"
                   type="number"
                   min="1"
                   max="50"
                   value={numQuestions}
                   onChange={(e) => setNumQuestions(e.target.value)}
-                  className="glass"
+                  className="mt-1"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Difficulty</Label>
+              <div>
+                <Label className="text-sm">Difficulty</Label>
                 <Select value={difficulty} onValueChange={setDifficulty}>
-                  <SelectTrigger className="glass">
+                  <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -177,26 +196,40 @@ const Quiz = () => {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>Question Type</Label>
+              <div>
+                <Label className="text-sm">Question Type</Label>
                 <Select value={questionType} onValueChange={setQuestionType}>
-                  <SelectTrigger className="glass">
+                  <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
-                    <SelectItem value="input">Input Answer</SelectItem>
+                    <SelectItem value="free-response">Input Answer</SelectItem>
                     <SelectItem value="mixed">Mixed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-
-            <Button className="w-full gradient-primary h-12 text-lg">
-              <Sparkles className="h-5 w-5 mr-2" />
-              Generate Quiz
-            </Button>
           </div>
+
+          {/* Generate Button */}
+          <Button 
+            onClick={handleGenerate}
+            disabled={loading || (!description && !file)}
+            className="w-full h-12 text-base"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate Quiz
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
+// frontend/src/components/ProtectedRoute.tsx
 import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import config from '@/config';
+import config from '@/config';  // Now this works!
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

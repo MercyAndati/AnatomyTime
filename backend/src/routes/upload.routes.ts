@@ -1,54 +1,55 @@
+// backend/src/routes/upload.routes.ts
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
-import ImageMapQuiz from '../models/ImageMapQuiz';
+import { FileExtractorService } from '../services/fileExtractor.service';
 
 const router = express.Router();
 
-// Configure multer for image uploads
+// Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads');
-    
-    // Create uploads directory if it doesn't exist
+    const uploadDir = path.join(__dirname, '../../uploads/temp');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
-    
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    cb(null, 'upload-' + uniqueSuffix + ext);
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|svg/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp'
+    ];
     
-    if (mimetype && extname) {
-      return cb(null, true);
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'));
+      cb(new Error('Invalid file type') as any, false);
     }
-  },
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  }
 });
 
-// Middleware to verify token
+// Middleware
 const verifyToken = (req: any, res: any, next: any) => {
   const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
-
+  if (!token) return res.status(401).json({ message: 'No token' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
     req.userId = decoded.userId;
@@ -58,52 +59,115 @@ const verifyToken = (req: any, res: any, next: any) => {
   }
 };
 
-// Upload images for image map quiz
-router.post('/image-map', verifyToken, upload.fields([
-  { name: 'unlabeledImage', maxCount: 1 },
-  { name: 'labeledImage', maxCount: 1 }
-]), async (req: any, res) => {
+// Upload and extract text from file
+router.post('/extract', verifyToken, upload.single('file'), async (req: any, res) => {
+  const fileExtractor = req.app.locals.fileExtractor as FileExtractorService;
+
   try {
-    const { title, description, regions, difficulty, category, tags } = req.body;
-    
-    if (!req.files || !req.files['unlabeledImage'] || !req.files['labeledImage']) {
-      return res.status(400).json({ message: 'Both unlabeled and labeled images are required' });
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
     }
-    
-    // Parse regions from JSON string
-    let parsedRegions = [];
-    try {
-      parsedRegions = JSON.parse(regions);
+
+    const result = await fileExtractor.extractText(
+      req.file.path,
+      req.file.mimetype,
+      req.file.originalname
+    );
+
+    // Extract keywords for preview
+    const keywords = await fileExtractor.extractKeywords(result.text, 15);
+
+    res.json({
+      message: 'File processed successfully',
+      data: {
+        text: result.text.substring(0, 1000) + '...', // Preview
+        fullLength: result.text.length,
+        metadata: result.metadata,
+        keywords,
+        sections: result.sections
+      }
+    });
+
     } catch (error) {
-      return res.status(400).json({ message: 'Invalid regions format' });
+    console.error('Upload extraction error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    if (req.file) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
     }
     
-    // Create the image map quiz
-    const quiz = new ImageMapQuiz({
-      title,
-      description,
-      imageUrl: `/uploads/${req.files['unlabeledImage'][0].filename}`,
-      labeledImageUrl: `/uploads/${req.files['labeledImage'][0].filename}`,
-      regions: parsedRegions,
-      difficulty: difficulty || 'standard',
-      category: category || 'Anatomy',
-      tags: tags ? tags.split(',') : [],
-      createdBy: req.userId
+    res.status(500).json({ 
+      message: 'Failed to process file',
+      error: errorMessage 
     });
-    
-    await quiz.save();
-    
-    res.status(201).json({
-      message: 'Image map quiz created successfully',
-      quiz
-    });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Serve uploaded images statically
-router.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+// Validate file before upload
+router.post('/validate', upload.single('file'), async (req: any, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const fileExtractor = req.app.locals.fileExtractor as FileExtractorService;
+    const contentFilter = req.app.locals.contentFilter;
+
+    // Extract text
+    const result = await fileExtractor.extractText(
+      req.file.path,
+      req.file.mimetype,
+      req.file.originalname
+    );
+
+    // Validate content
+    const filterResult = await contentFilter.filterContent(result.text);
+
+    // Clean up
+    try { fs.unlinkSync(req.file.path); } catch (e) {}
+
+    res.json({
+      valid: filterResult.isValid,
+      message: filterResult.reason || 'File is valid',
+      metadata: {
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+        fileType: req.file.mimetype,
+        wordCount: result.metadata.wordCount
+      },
+      anatomyTopics: filterResult.detectedTopics,
+      suggestions: filterResult.suggestions
+    });
+
+    } catch (error) {
+      console.error('Validation error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (req.file) {
+        try { fs.unlinkSync(req.file.path); } catch (e) {}
+      }
+      
+      res.status(500).json({ 
+        message: 'Validation failed',
+        error: errorMessage 
+      });
+    }
+});
+
+// Get supported file types
+router.get('/supported-types', (req, res) => {
+  res.json({
+    types: [
+      { mime: 'application/pdf', extension: '.pdf', name: 'PDF Document' },
+      { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', extension: '.docx', name: 'Word Document' },
+      { mime: 'text/plain', extension: '.txt', name: 'Text File' },
+      { mime: 'image/jpeg', extension: '.jpg,.jpeg', name: 'JPEG Image' },
+      { mime: 'image/png', extension: '.png', name: 'PNG Image' },
+      { mime: 'image/gif', extension: '.gif', name: 'GIF Image' },
+      { mime: 'image/webp', extension: '.webp', name: 'WebP Image' }
+    ],
+    maxSize: '50MB'
+  });
+});
 
 export default router;

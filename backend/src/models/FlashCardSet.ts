@@ -1,10 +1,10 @@
-// backend/src/models/FlashcardSet.ts
+// backend/src/models/FlashCardSet.ts
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IFlashcard {
   id: string;
-  front: string; // The question or term
-  back: string;  // The answer or definition
+  front: string;
+  back: string;
   hint?: string;
   imageUrl?: string;
   mastered: boolean;
@@ -18,10 +18,11 @@ export interface IFlashcardSet extends Document {
   createdBy: mongoose.Types.ObjectId;
   sourcePrompt?: string;
   sourceFileUrl?: string;
+  sourceFileMetadata?: any;
   isPublic: boolean;
   tags: string[];
   likes: number;
-  studies: number; // Number of times users studied this set
+  studies: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +44,7 @@ const flashcardSetSchema = new Schema<IFlashcardSet>({
   createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   sourcePrompt: String,
   sourceFileUrl: String,
+  sourceFileMetadata: Schema.Types.Mixed,
   isPublic: { type: Boolean, default: false },
   tags: [String],
   likes: { type: Number, default: 0 },

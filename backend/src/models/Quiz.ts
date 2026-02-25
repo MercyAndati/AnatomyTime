@@ -1,3 +1,4 @@
+// backend/src/models/Quiz.ts
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IQuestion {
@@ -18,11 +19,11 @@ export interface IQuiz extends Document {
   questions: IQuestion[];
   totalPoints: number;
   difficulty: 'easy' | 'standard' | 'hard';
-  type: 'standard'; // Only 'standard' now
+  type: 'standard';
   createdBy: mongoose.Types.ObjectId;
   sourcePrompt?: string;
   sourceFileUrl?: string;
-  timeLimitMinutes?: number; // NEW: For rapid-fire (null = normal quiz)
+  timeLimitMinutes?: number;
   isPublic: boolean;
   tags: string[];
   likes: number;
@@ -70,7 +71,7 @@ const quizSchema = new Schema<IQuiz>({
   },
   sourcePrompt: String,
   sourceFileUrl: String,
-  timeLimitMinutes: Number, // NEW
+  timeLimitMinutes: Number,
   isPublic: { type: Boolean, default: false },
   tags: [String],
   likes: { type: Number, default: 0 },
@@ -80,13 +81,18 @@ const quizSchema = new Schema<IQuiz>({
   timestamps: true
 });
 
-// Auto-calculate total points before saving
-// @ts-expect-error - Mongoose 9 types don't properly recognize 'save' as a valid hook event
-quizSchema.pre('save', function(this: IQuiz, next: () => void) {
-  this.totalPoints = this.questions.reduce(
-    (sum: number, q: IQuestion) => sum + q.points, 0
-  );
-  next();
+// Fix: Use function declaration without 'next' parameter
+// In newer Mongoose versions, pre-save hooks use the document context
+quizSchema.pre('save', function() {
+  // Calculate total points from questions
+  if (this.questions && this.questions.length > 0) {
+    this.totalPoints = this.questions.reduce(
+      (sum: number, q: IQuestion) => sum + (q.points || 1), 0
+    );
+  } else {
+    this.totalPoints = 0;
+  }
+  // No need to call next() - just return
 });
 
 export default mongoose.model<IQuiz>('Quiz', quizSchema);

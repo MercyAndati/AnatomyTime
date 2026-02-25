@@ -1,3 +1,4 @@
+// frontend/src/pages/Community.tsx
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
@@ -7,35 +8,28 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Heart, MessageCircle, Download, Search, Plus, FileText, Brain, Zap, Map, Eye, Play, Trash2 } from "lucide-react";
+import { Heart, MessageCircle, Download, Search, Plus, FileText, Brain, Zap, Map, Eye, Play, Trash2, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import axios from "axios";
+import { api } from "@/utils/api";
+import type { CommunityPost } from "@/types";
 
 // Define TypeScript interfaces
 type CategoryType = "All" | "Quiz" | "Flashcards" | "Notes" | "Image Map";
-
-interface CommunityPost {
-  id: string;
-  author: string;
-  title: string;
-  type: string; // Backend type (e.g., 'image_map_share')
-  typeDisplay?: string; // Display type (e.g., 'Image Map')
-  likes: number;
-  comments: number;
-  downloads: number;
-  createdAt: string;
-  description: string;
-  questionCount: number;
-  alreadyShared?: boolean;
-  resourceId?: string;
-}
 
 interface Category {
   name: CategoryType;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   count: number;
 }
+
+// Map backend types to frontend category names
+const typeToCategoryMap: Record<string, CategoryType> = {
+  'quiz_share': 'Quiz',
+  'flashcard_share': 'Flashcards',
+  'image_map_share': 'Image Map',
+  'note': 'Notes'
+};
 
 const Community = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>("All");
@@ -69,11 +63,9 @@ const Community = () => {
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/api/community`, {
-        params: { category: selectedCategory === "All" ? undefined : selectedCategory }
-      });
+      const response = await api.getCommunityPosts(selectedCategory === "All" ? undefined : selectedCategory);
 
-      const fetchedPosts: CommunityPost[] = response.data.posts;
+      const fetchedPosts: CommunityPost[] = response.posts;
       setPosts(fetchedPosts);
 
       // Update counts if fetching "All"
@@ -89,14 +81,6 @@ const Community = () => {
         // Count "All"
         newCategories[0].count = fetchedPosts.length;
 
-        // Map backend types to frontend category names
-        const typeToCategoryMap: { [key: string]: string } = {
-          'quiz_share': 'Quiz',
-          'flashcard_share': 'Flashcards',
-          'image_map_share': 'Image Map',
-          'note': 'Notes'
-        };
-
         // Count others
         fetchedPosts.forEach((p: CommunityPost) => {
           const categoryName = typeToCategoryMap[p.type] || p.type;
@@ -109,10 +93,15 @@ const Community = () => {
 
     } catch (error) {
       console.error("Error fetching community posts:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load community posts",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, toast]);
 
   useEffect(() => {
     fetchPosts();
@@ -125,6 +114,88 @@ const Community = () => {
       description: "Your study material has been shared with the community.",
     });
     setIsShareOpen(false);
+  };
+
+  const handleLike = async (post: CommunityPost) => {
+    // Optimistic update
+    setPosts(prev => prev.map(p =>
+      p.id === post.id ? { ...p, likes: p.likes + 1 } : p
+    ));
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: "Authentication Required",
+          description: "Please login to like posts",
+          variant: "destructive",
+        });
+        // Revert
+        setPosts(prev => prev.map(p =>
+          p.id === post.id ? { ...p, likes: p.likes - 1 } : p
+        ));
+        return;
+      }
+
+      await api.likePost(post.resourceId || post.id, post.type);
+    } catch (err) {
+      // Revert on error
+      setPosts(prev => prev.map(p =>
+        p.id === post.id ? { ...p, likes: p.likes - 1 } : p
+      ));
+      console.error("Like failed", err);
+      toast({
+        title: "Error",
+        description: "Failed to like post",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async (post: CommunityPost) => {
+    if (!confirm("Remove this from the community?")) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast({ 
+          variant: "destructive", 
+          title: "Error", 
+          description: "Please login to remove posts." 
+        });
+        return;
+      }
+      
+      await api.deletePost(post.id);
+      
+      toast({ 
+        title: "Removed", 
+        description: "Post removed from community." 
+      });
+      
+      // Remove from local state
+      setPosts(prev => prev.filter(p => p.id !== post.id));
+      
+      // Update counts
+      const categoryName = typeToCategoryMap[post.type] || post.type;
+      
+      setCategories(prev => prev.map(c => {
+        if (c.name === "All" || c.name === categoryName) {
+          return { ...c, count: Math.max(0, c.count - 1) };
+        }
+        return c;
+      }));
+      
+    } catch (err: unknown) {
+      console.error("Failed to remove:", err);
+      const error = err as { response?: { data?: { message?: string } } };
+      const errorMessage = error.response?.data?.message || "You are not authorized to remove this.";
+      toast({ 
+        variant: "destructive", 
+        title: "Action Failed", 
+        description: errorMessage 
+      });
+    }
   };
 
   const handleDownload = (post: CommunityPost) => {
@@ -334,86 +405,24 @@ const Community = () => {
                         <button
                           className="text-muted-foreground hover:text-destructive transition-colors ml-auto p-2"
                           title="Remove from Community (Admin/Owner)"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (!confirm("Remove this from the community?")) return;
-                            try {
-                              const token = localStorage.getItem('token');
-                              if (!token) {
-                                toast({ variant: "destructive", title: "Error", description: "Please login to remove posts." });
-                                return;
-                              }
-                              
-                              // Use the community delete endpoint
-                              await axios.delete(`http://localhost:5000/api/community/${post.id}`, {
-                                headers: { Authorization: `Bearer ${token}` }
-                              });
-                              
-                              toast({ title: "Removed", description: "Post removed from community." });
-                              
-                              // Remove from local state
-                              setPosts(prev => prev.filter(p => p.id !== post.id));
-                              
-                              // Update counts - map backend type to frontend category
-                              const typeToCategoryMap: { [key: string]: string } = {
-                                'quiz_share': 'Quiz',
-                                'flashcard_share': 'Flashcards',
-                                'image_map_share': 'Image Map',
-                                'note': 'Notes'
-                              };
-                              const categoryName = typeToCategoryMap[post.type] || post.type;
-                              
-                              setCategories(prev => prev.map(c => {
-                                if (c.name === "All" || c.name === categoryName) {
-                                  return { ...c, count: Math.max(0, c.count - 1) };
-                                }
-                                return c;
-                              }));
-                            } catch (err: any) {
-                              console.error("Failed to remove:", err);
-                              const errorMessage = err.response?.data?.message || "You are not authorized to remove this.";
-                              toast({ variant: "destructive", title: "Action Failed", description: errorMessage });
-                            }
-                          }}
+                          onClick={() => handleDelete(post)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
 
-                        <h3 className="text-xl font-semibold mb-2">{post.title}</h3>
+                        <h3 className="text-xl font-semibold mb-2">
+                          {post.title.replace(/^Flashcards:\s*/, '').replace(/^Quiz:\s*/, '')}
+                        </h3>
 
                         <div className="inline-flex items-center gap-2 glass rounded-full px-3 py-1 text-sm">
-                          <span className="text-primary font-medium">{post.typeDisplay || post.type}</span>
+                          <span className="text-primary font-medium">{typeToCategoryMap[post.type] || post.type}</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-6 mt-4 pt-4 border-t border-glass-border">
                       <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          // Optimistic update
-                          setPosts(prev => prev.map(p =>
-                            p.id === post.id ? { ...p, likes: p.likes + 1 } : p
-                          ));
-
-                          try {
-                            const token = localStorage.getItem('token');
-                            const headers = token ? { Authorization: `Bearer ${token}` } : {};
-                            // Use backend type for API calls
-                            const endpoint = post.type === 'image_map_share'
-                              ? `http://localhost:5000/api/image-map/${post.resourceId || post.id}/like`
-                              : `http://localhost:5000/api/quiz/${post.resourceId || post.id}/like`;
-                            
-                            await axios.post(endpoint, {}, { headers });
-                          } catch (err) {
-                            // Revert
-                            setPosts(prev => prev.map(p =>
-                              p.id === post.id ? { ...p, likes: p.likes - 1 } : p
-                            ));
-                            console.error("Like failed", err);
-                            toast({ title: "Error", description: "Failed to like post.", variant: "destructive" });
-                          }
-                        }}
+                        onClick={() => handleLike(post)}
                         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                       >
                         <Heart className="h-4 w-4" />
@@ -439,13 +448,21 @@ const Community = () => {
                           <Play className="h-4 w-4" />
                           Take Quiz
                         </button>
-                      ) : (
+                      ) : post.type === 'flashcard_share' ? (
                         <button
-                          onClick={() => handleDownload(post)}
+                          onClick={() => navigate(`/flashcards/${post.resourceId || post.id}`)}
                           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors ml-auto"
                         >
-                          <Download className="h-4 w-4" />
-                          Download
+                          <BookOpen className="h-4 w-4" />
+                          View Cards
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => navigate(`/quiz/${post.resourceId || post.id}`)}
+                          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors ml-auto"
+                        >
+                          <Play className="h-4 w-4" />
+                          Take Quiz
                         </button>
                       )}
                     </div>
@@ -463,7 +480,7 @@ const Community = () => {
           <DialogHeader>
             <DialogTitle>{previewPost?.title}</DialogTitle>
             <DialogDescription>
-              Preview of {previewPost?.typeDisplay || previewPost?.type} by {previewPost?.author}
+              Preview of {typeToCategoryMap[previewPost?.type || ''] || previewPost?.type} by {previewPost?.author}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -474,7 +491,7 @@ const Community = () => {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Type:</span>
-                  <span className="font-medium">{previewPost?.typeDisplay || previewPost?.type}</span>
+                  <span className="font-medium">{typeToCategoryMap[previewPost?.type || ''] || previewPost?.type}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Author:</span>
@@ -482,12 +499,10 @@ const Community = () => {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    {previewPost?.type === 'image_map_share' || previewPost?.type === 'quiz_share' ? 'Questions:' : 'Downloads:'}
+                    {previewPost?.type === 'image_map_share' || previewPost?.type === 'quiz_share' ? 'Questions:' : 'Cards:'}
                   </span>
                   <span className="font-medium">
-                    {previewPost?.type === 'image_map_share' || previewPost?.type === 'quiz_share'
-                      ? previewPost?.questionCount
-                      : previewPost?.downloads}
+                    {previewPost?.questionCount}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -511,16 +526,27 @@ const Community = () => {
                   <Play className="h-4 w-4 mr-2" />
                   Take Quiz
                 </Button>
-              ) : (
+              ) : previewPost?.type === 'flashcard_share' ? (
                 <Button
                   onClick={() => {
-                    handleDownload(previewPost!);
+                    navigate(`/flashcards/${previewPost.resourceId || previewPost.id}`);
                     setPreviewPost(null);
                   }}
                   className="gradient-primary flex-1"
                 >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  View Cards
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    navigate(`/quiz/${previewPost.resourceId || previewPost.id}`);
+                    setPreviewPost(null);
+                  }}
+                  className="gradient-primary flex-1"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Take Quiz
                 </Button>
               )}
             </div>
