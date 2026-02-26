@@ -18,6 +18,7 @@ import Community from "./pages/Community";
 import { Dashboard } from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import AdminWithPicker from "./pages/AdminWithPicker";
+import { ViewNote } from "./pages/ViewNote";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/image-map" element={<ImageMapQuiz />} />
             <Route path="/image-map/:id" element={<ImageMapQuiz />} />
             <Route path="/community" element={<Community />} />
+            <Route path="/notes/:id" element={<ViewNote />} />
             <Route
               path="/admin"
               element={

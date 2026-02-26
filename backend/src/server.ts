@@ -16,6 +16,7 @@ import flashcardRoutes from './routes/flashcard.routes';
 import communityRoutes from './routes/community.routes';
 import adminRoutes from './routes/admin.routes';
 import uploadRoutes from './routes/upload.routes';
+import noteRoutes from './routes/note.routes';
 
 // Services
 import { AIService } from './services/ai.service';
@@ -25,6 +26,19 @@ import { FileExtractorService } from './services/fileExtractor.service';
 dotenv.config();
 
 const app = express();
+app.use((req, res, next) => {
+  res.removeHeader("X-Frame-Options");
+
+  const frontendUrl =
+    process.env.FRONTEND_URL || "http://localhost:3000";
+
+  res.setHeader(
+    "Content-Security-Policy",
+    `frame-ancestors 'self' ${frontendUrl}`
+  );
+
+  next();
+});
 
 // Security middleware
 app.use(helmet({
@@ -70,6 +84,7 @@ app.use('/api/flashcards', flashcardRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/notes', noteRoutes);
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

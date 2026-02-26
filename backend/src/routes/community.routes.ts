@@ -5,6 +5,9 @@ import ImageMapQuiz from '../models/ImageMapQuiz';
 import FlashcardSet from '../models/FlashCardSet';
 import CommunityPost from '../models/CommunityPost';
 import User from '../models/User';
+import Note from '../models/Note';
+import fs from 'fs';
+import path from 'path';
 
 const router = express.Router();
 
@@ -27,7 +30,7 @@ const verifyToken = (req: any, res: any, next: any) => {
 // Get community posts (aggregated from CommunityPost collection)
 router.get('/', async (req, res) => {
   try {
-    const { category, search } = req.query;
+    const { category, search, sortBy ='latest' } = req.query;
 
     // Build query for CommunityPost
     let query: any = {};
@@ -48,15 +51,29 @@ router.get('/', async (req, res) => {
 
     // Text search
     if (search) {
-      query.title = { $regex: search, $options: 'i' };
+      query.$or=[
+        {title:{ $regex: search, $options: 'i'}},
+        {content:{$regex: search, $options: 'i'}}
+      ];
     }
 
+    //determine sort order
+    let sortOptions: any={};
+    if (sortBy === 'popular') {
+      sortOptions = { upvotes: -1, createdAt: -1 };
+    } else if (sortBy === 'most_commented') {
+      sortOptions = { comments: -1, createdAt: -1 };
+    } else {
+      sortOptions = { createdAt: -1 }; // latest
+    }
+    
     // Fetch community posts with populated references
     const posts = await CommunityPost.find(query)
       .populate('sharedBy', 'name')
       .populate('quizId')
       .populate('flashcardSetId')
       .populate('imageMapQuizId')
+      .populate('noteId')
       .sort({ createdAt: -1 })
       .limit(50);
 
@@ -113,12 +130,16 @@ router.get('/', async (req, res) => {
           };
           
         case 'note':
+          const note = post.noteId as any;
+
           return {
             ...baseData,
-            questionCount: 0,
-            downloads: 0,
-            resourceId: null
-          };
+            description: note?.content || '',
+            downloads: note?.downloads || 0,
+            resourceId: note?._id,
+            fileUrl: note?.fileUrl,
+            fileType: note?.fileType
+        };
           
         default:
           return baseData;
@@ -238,8 +259,30 @@ router.delete('/:id', verifyToken, async (req: any, res) => {
     } else if (post.imageMapQuizId) {
       resourceId = post.imageMapQuizId.toString();
       resourceType = 'imageMap';
+    }else if (post.noteId) {
+      resourceId = post.noteId.toString();
+      resourceType = 'note';
     }
 
+    if (post.type === 'note' && post.noteId) {
+
+      const note = await Note.findById(post.noteId);
+
+      if (note) {
+
+        // delete uploaded file
+        if (note.fileUrl) {
+          const filePath = path.join(__dirname, '../..', note.fileUrl);
+
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        }
+
+        // delete note document
+        await Note.deleteOne({ _id: note._id });
+      }
+    }
     // Delete the community post
     await CommunityPost.deleteOne({ _id: post._id });
 
@@ -278,9 +321,24 @@ router.post('/:id/like', verifyToken, async (req: any, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    // Optional: prevent duplicate likes per user in future using post.upvotedBy
+    // Check if user already liked (prevent duplicate)
+    if (post.upvotedBy.includes(req.userId)) {
+      return res.status(400).json({ message: 'Already liked' });
+    }
+
+    // Add user to upvotedBy
+    post.upvotedBy.push(req.userId);
     post.upvotes += 1;
     await post.save();
+
+    // Also increment like on the original resource
+    if (post.type === 'quiz_share' && post.quizId) {
+      await Quiz.findByIdAndUpdate(post.quizId, { $inc: { likes: 1 } });
+    } else if (post.type === 'flashcard_share' && post.flashcardSetId) {
+      await FlashcardSet.findByIdAndUpdate(post.flashcardSetId, { $inc: { likes: 1 } });
+    } else if (post.type === 'image_map_share' && post.imageMapQuizId) {
+      await ImageMapQuiz.findByIdAndUpdate(post.imageMapQuizId, { $inc: { likes: 1 } });
+    }
 
     res.json({ likes: post.upvotes });
   } catch (error) {

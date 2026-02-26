@@ -8,12 +8,16 @@ import {
   GenerateQuizResponse,
   GenerateFlashcardResponse,
   AuthResponse,
-  CommunityPostsResponse
+  CommunityPostsResponse,
+  Note
 } from '@/types';
 
 class ApiClient {
   private baseUrl: string;
   private defaultTimeout = 10000;
+  getNoteFileUrl(fileName: string): string {
+    return `${this.baseUrl}/notes/file/${fileName}`;
+  }
 
   constructor() {
     this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -234,26 +238,87 @@ class ApiClient {
     });
   }
 
+
   async deletePost(postId: string): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/community/${postId}`, {
       method: 'DELETE',
     });
   }
 
-  async likePost(resourceId: string, type: string): Promise<void> {
-    let endpoint: string | undefined;
+  async likePost(postId: string, type: string, resourceId?: string): Promise<{ likes: number }> {
+    // First try to like via community endpoint (syncs with resource)
+    try {
+      return await this.request<{ likes: number }>(`/community/${postId}/like`, {
+        method: 'POST',
+      });
+    } catch (error) {
+      // Fallback to direct resource like if community endpoint fails
+      const targetId = resourceId || postId;
+      let endpoint: string;
 
-    if (type === 'image_map_share') {
-      endpoint = `/image-map/${resourceId}/like`;
-    } else if (type === 'quiz_share') {
-      endpoint = `/quiz/${resourceId}/like`;
-    } else {
-      // No like endpoint for this type (e.g., notes/flashcards)
-      return;
+      if (type === 'image_map_share') {
+        endpoint = `/image-map/${targetId}/like`;
+      } else if (type === 'quiz_share') {
+        endpoint = `/quiz/${targetId}/like`;
+      } else if (type === 'flashcard_share') {
+        endpoint = `/flashcards/${targetId}/like`;
+      } else {
+        throw new Error('Cannot like this post type');
+      }
+
+      return await this.request<{ likes: number }>(endpoint, { 
+        method: 'POST' 
+      });
     }
-
-    await this.request(endpoint, { method: 'POST' });
+  }
+  // Note endpoints
+  async createNote(data: { title: string; content?: string; tags?: string }, file?: File): Promise<{ message: string; note: Note }> {
+  if (file) {
+    const formData = new FormData();
+    formData.append('title', data.title);
+    if (data.content) formData.append('content', data.content); // Only if exists
+    if (data.tags) formData.append('tags', data.tags);
+    formData.append('file', file);
+    
+    return this.requestForm<{ message: string; note: Note }>('/notes/create', formData);
+  } else {
+    // For text-only notes, content is required
+    if (!data.content) {
+      throw new Error('Content is required when not uploading a file');
+    }
+    return this.request<{ message: string; note: Note }>('/notes/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 }
+
+  async getMyNotes(): Promise<{ notes: Note[] }> {
+    return this.request<{ notes: Note[] }>('/notes/my-notes');
+  }
+
+  async getNote(id: string): Promise<Note> {
+    return this.request<Note>(`/notes/${id}`);
+  }
+
+  async shareNote(noteId: string): Promise<{ message: string; post: CommunityPost }> {
+    return this.request<{ message: string; post: CommunityPost }>(`/notes/${noteId}/share`, {
+      method: 'POST',
+    });
+  }
+
+  async deleteNote(noteId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/notes/${noteId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async likeNote(noteId: string): Promise<{ likes: number }> {
+    return this.request<{ likes: number }>(`/notes/${noteId}/like`, {
+      method: 'POST',
+    });
+  }
+}
+
 
 export const api = new ApiClient();

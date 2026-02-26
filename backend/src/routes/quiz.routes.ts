@@ -739,4 +739,21 @@ router.delete('/:id', verifyToken, async (req: any, res) => {
   }
 });
 
+// Like a quiz
+router.post('/:id/like', verifyToken, async (req: any, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.id);
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz not found' });
+    }
+
+    quiz.likes += 1;
+    await quiz.save();
+
+    res.json({ likes: quiz.likes });
+  } catch (error) {
+    console.error('Like quiz error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 export default router;

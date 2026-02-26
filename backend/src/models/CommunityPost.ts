@@ -13,7 +13,8 @@ export interface ICommunityPost extends Document {
   // Engagement metrics
   upvotes: number;
   upvotedBy: mongoose.Types.ObjectId[]; // Users who upvoted
-  comments: mongoose.Types.ObjectId[]; // Reference to a Comment model if you build it
+  comments: mongoose.Types.ObjectId[];
+  noteId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +31,7 @@ const communityPostSchema = new Schema<ICommunityPost>({
   quizId: { type: Schema.Types.ObjectId, ref: 'Quiz' },
   flashcardSetId: { type: Schema.Types.ObjectId, ref: 'FlashcardSet' },
   imageMapQuizId: { type: Schema.Types.ObjectId, ref: 'ImageMapQuiz' },
+  noteId: { type: Schema.Types.ObjectId, ref: 'Note' },
   upvotes: { type: Number, default: 0 },
   upvotedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }] // Optional

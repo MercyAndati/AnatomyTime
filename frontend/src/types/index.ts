@@ -85,6 +85,25 @@ export interface CommunityPost {
   alreadyShared?: boolean;
 }
 
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  fileUrl?: string;
+  fileType?: string;
+  createdBy: {
+    _id: string;
+    name: string;
+    email: string;
+  } | string;
+  isPublic: boolean;
+  tags: string[];
+  likes: number;
+  downloads: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   data?: T;
