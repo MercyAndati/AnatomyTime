@@ -453,7 +453,8 @@ router.post('/:id/attempt', verifyToken, async (req: any, res) => {
 
     if (quiz.timeLimitMinutes && isRapid) {
       const timeLimitSeconds = quiz.timeLimitMinutes * 60;
-      if (timeSpent > timeLimitSeconds) {
+      // ✅ Added a 30-second grace period to account for network latency and auto-submit delays
+      if (timeSpent > timeLimitSeconds + 30) {
         return res.status(400).json({ 
           message: 'Time limit exceeded',
           timeLimit: quiz.timeLimitMinutes,

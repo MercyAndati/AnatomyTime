@@ -1,4 +1,3 @@
-// frontend/src/pages/TakeQuiz.tsx
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { QuizSession } from "@/components/quiz/QuizSession";
@@ -86,18 +85,19 @@ export const TakeQuiz = () => {
         id!,
         answersArray,
         time,
-        quiz?.isRapid || false
+        !!quiz?.timeLimitMinutes // ✅ FIX 1: If it has a timer, treat it as a Rapid Quiz!
       );
 
       setAttemptResult(result);
       setState("results");
     } catch (error) {
       toast({
-        title: "Error",
+        title: "Submission Error",
         description: error instanceof Error ? error.message : "Failed to submit quiz",
         variant: "destructive",
       });
-      setState("taking");
+      // ✅ FIX: Do NOT set state back to "taking". Send them safely back to the dashboard.
+      navigate("/dashboard"); 
     }
   };
 
@@ -153,7 +153,7 @@ export const TakeQuiz = () => {
           questions={questions}
           title={quiz.title}
           timeLimitMinutes={quiz.timeLimitMinutes}
-          isRapid={quiz.isRapid}
+          isRapid={!!quiz.timeLimitMinutes} // ✅ FIX 2: Trigger the timer UI
           onComplete={handleQuizComplete}
         />
       </>

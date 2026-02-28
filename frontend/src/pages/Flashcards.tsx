@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, X, Sparkles, Loader2, Target } from "lucide-react";
+import { Upload, X, Sparkles, Loader2, Target, FileText, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { api } from "@/utils/api";
 
@@ -13,36 +13,37 @@ const Flashcards = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState("");
-  const [focusTopic, setFocusTopic] = useState(""); // ✅ Added Focus Topic
+  const [focusTopic, setFocusTopic] = useState(""); 
   const [numCards, setNumCards] = useState("10");
   const [file, setFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const requiresFocusTopic = file ? file.size > 10 * 1024 * 1024 : false;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      if (selectedFile.size > 130 * 1024 * 1024) { // Increased to 130MB
-        toast({
-          title: "File too large",
-          description: "Please upload a file smaller than 130MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      setFile(selectedFile);
+    if (!selectedFile) return;
+
+    if (selectedFile.size > 150 * 1024 * 1024) { 
       toast({
-        title: "File uploaded",
-        description: selectedFile.name,
+        title: "File too large",
+        description: "Please upload a file smaller than 150MB",
+        variant: "destructive"
       });
+      return; 
     }
+
+    setFile(selectedFile);
+    setFileError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const removeFile = () => {
     setFile(null);
     setFocusTopic("");
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    setFileError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleGenerate = async () => {
@@ -56,6 +57,7 @@ const Flashcards = () => {
     }
 
     setLoading(true);
+    setFileError(null);
 
     try {
       let response;
@@ -65,7 +67,7 @@ const Flashcards = () => {
         formData.append('file', file);
         formData.append('numCards', numCards);
         formData.append('includeHints', 'true');
-        if (focusTopic) formData.append('focusTopic', focusTopic); // ✅ Send focus topic
+        if (focusTopic) formData.append('focusTopic', focusTopic);
         
         response = await api.generateFlashcardsFromFile(formData);
       } else {
@@ -81,23 +83,16 @@ const Flashcards = () => {
         description: response.message,
       });
 
-      navigate(`/flashcards/${response.set.id}`);
+      navigate(`/flashcards/${response.flashcardSet.id}`);
 
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : "Failed to generate flashcards";
       
-      // Graceful fallback for extraction errors
-      if (errMsg.toLowerCase().includes('extract') || errMsg.toLowerCase().includes('parse')) {
-        toast({
-          title: "File Processing Failed",
-          description: "We couldn't read the text in that file. Please copy and paste your notes directly into the text box below.",
-          variant: "destructive",
-          duration: 6000,
-        });
-        removeFile();
+      if (file) {
+        setFileError(errMsg);
       } else {
         toast({
-          title: "Validation Error",
+          title: "Generation Failed",
           description: errMsg,
           variant: "destructive",
         });
@@ -107,6 +102,16 @@ const Flashcards = () => {
     }
   };
 
+  const parsedNum = parseInt(numCards);
+  const isNumInvalid = isNaN(parsedNum) || parsedNum < 1 || parsedNum > 50;
+
+  const isGenerateDisabled = 
+    loading || 
+    (!notes && !file) || 
+    (requiresFocusTopic && !focusTopic.trim()) ||
+    !!fileError ||
+    isNumInvalid;
+
   return (
     <div className="min-h-screen pb-20">
       <Navigation />
@@ -115,7 +120,7 @@ const Flashcards = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold">Generate Flashcards</h1>
           <p className="text-muted-foreground mt-1">
-            Turn your notes into interactive flashcards instantly
+            Turn your notes or documents into interactive flashcards instantly
           </p>
         </div>
 
@@ -127,34 +132,68 @@ const Flashcards = () => {
               ref={fileInputRef}
               type="file"
               onChange={handleFileChange}
-              accept=".pdf,.docx,.ppt,.pptx,.txt" // ✅ Added PPT
+              accept=".pdf,.docx,.ppt,.pptx,.txt"
               className="hidden"
             />
             
             {file ? (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                <div className="flex items-center justify-between p-3 bg-muted rounded-md border border-primary/20">
-                  <span className="text-sm font-medium truncate">{file.name}</span>
-                  <Button size="sm" variant="ghost" onClick={removeFile} className="hover:text-destructive">
+                <div className={`flex items-center justify-between p-3 rounded-md border transition-colors ${
+                  fileError ? 'bg-destructive/10 border-destructive/20' : 'bg-muted/50 border-primary/20'
+                }`}>
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    {fileError ? (
+                      <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+                    ) : (
+                      <FileText className="h-5 w-5 text-primary flex-shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium truncate block">{file.name}</span>
+                      <span className="text-xs text-muted-foreground block">
+                        {(file.size / (1024 * 1024)).toFixed(2)} MB
+                      </span>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={removeFile} className="hover:text-destructive flex-shrink-0 ml-2">
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
 
-                <div className="bg-primary/5 p-4 rounded-md border border-primary/10">
-                  <Label className="text-sm flex items-center gap-2 mb-2">
-                    <Target className="h-4 w-4 text-primary" />
-                    Narrow down the topic (Highly Recommended for large PPTs)
-                  </Label>
-                  <Input 
-                    placeholder="E.g., 'Focus only on the muscles of the arm'"
-                    value={focusTopic}
-                    onChange={(e) => setFocusTopic(e.target.value)}
-                    className="bg-background"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Tell the AI exactly which parts of the document to turn into flashcards.
-                  </p>
-                </div>
+                {fileError && (
+                  <div className="bg-destructive/10 text-destructive p-4 rounded-md text-sm border border-destructive/20 flex flex-col gap-2">
+                    <div className="flex items-start gap-2 font-semibold">
+                      <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <p>File Processing Failed</p>
+                    </div>
+                    <p className="opacity-90 ml-6">{fileError}</p>
+                    <p className="ml-6 mt-1 text-xs opacity-80 font-medium">Please remove this file and paste your notes below instead.</p>
+                  </div>
+                )}
+
+                {!fileError && (
+                  <div className={`p-4 rounded-md border transition-colors ${
+                    requiresFocusTopic && !focusTopic 
+                      ? 'bg-destructive/5 border-destructive/30' 
+                      : 'bg-primary/5 border-primary/10'
+                  }`}>
+                    <Label className="text-sm flex items-center gap-2 mb-2">
+                      <Target className={`h-4 w-4 ${requiresFocusTopic && !focusTopic ? 'text-destructive' : 'text-primary'}`} />
+                      Narrow down the topic {requiresFocusTopic && <span className="text-destructive font-bold">(Required for large files)</span>}
+                    </Label>
+                    <Input 
+                      placeholder="E.g., 'Focus only on the muscles of the arm'"
+                      value={focusTopic}
+                      onChange={(e) => setFocusTopic(e.target.value)}
+                      className={`bg-background ${requiresFocusTopic && !focusTopic ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                    />
+                    {requiresFocusTopic && !focusTopic && (
+                      <p className="text-xs text-destructive mt-2 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        This file is very large. You must specify a focus topic to guide the AI.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div
@@ -163,14 +202,13 @@ const Flashcards = () => {
               >
                 <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                 <p className="text-sm font-medium mb-1">Click to upload or drag and drop</p>
-                <p className="text-xs text-muted-foreground">PDF, PPTX, DOCX, TXT (Max 130MB)</p>
+                <p className="text-xs text-muted-foreground">PDF, PPTX, DOCX, TXT (Max 150MB)</p>
               </div>
             )}
           </div>
 
           {!file && (
             <>
-              {/* OR Divider */}
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
@@ -180,9 +218,8 @@ const Flashcards = () => {
                 </div>
               </div>
 
-              {/* Notes Input */}
               <div className="border rounded-lg p-6 bg-card">
-                <h2 className="text-sm font-medium mb-3">Paste notes OR Describe Your Topic</h2>
+                <h2 className="text-sm font-medium mb-3">Paste Notes OR Describe Topic</h2>
                 <Textarea
                   placeholder="Paste your extensive notes here (no length limit) or describe the topic..."
                   value={notes}
@@ -193,30 +230,40 @@ const Flashcards = () => {
             </>
           )}
 
-          {/* Number of Flashcards */}
           <div className="border rounded-lg p-6 bg-card">
             <Label className="text-sm">Number of Flashcards</Label>
             <Input
               type="number"
               min="1"
-              max="100"
+              max="50"
               value={numCards}
               onChange={(e) => setNumCards(e.target.value)}
-              className="mt-1 max-w-xs"
+              className={`mt-1 max-w-xs ${isNumInvalid ? 'border-destructive focus-visible:ring-destructive' : ''}`}
             />
+            {isNumInvalid && (
+              <p className="text-xs text-destructive mt-1 font-medium">
+                Please enter a number between 1 and 50.
+              </p>
+            )}
           </div>
 
-          {/* Generate Button */}
           <Button 
             onClick={handleGenerate}
-            disabled={loading || (!notes && !file)}
-            className="w-full h-12 text-base gradient-primary"
+            disabled={isGenerateDisabled}
+            className="w-full h-12 text-base gradient-primary relative overflow-hidden"
           >
             {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Analyzing Content...
-              </>
+              <div className="flex flex-col items-center justify-center">
+                <div className="flex items-center">
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <span>Processing...</span>
+                </div>
+                {file && file.size > 10 * 1024 * 1024 && (
+                  <span className="text-xs font-normal opacity-80 mt-0.5">
+                    Large files can take 1-2 minutes to analyze. Please don't close this page.
+                  </span>
+                )}
+              </div>
             ) : (
               <>
                 <Sparkles className="h-4 w-4 mr-2" />

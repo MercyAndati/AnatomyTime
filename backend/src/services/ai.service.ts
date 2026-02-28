@@ -130,15 +130,18 @@ export class AIService {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
       
       const prompt = `
-      You are a document classification AI for a biology study tool. 
-      Determine if the following text contains substantial information about human or animal anatomy, biology, physiology, or medicine.
+      You are a strict but intelligent content filter for a medical study app.
+      Evaluate the following text. It might be a massive wall of study notes, OR it might be a short request/prompt from a student asking for a quiz.
+      
+      Rule: Does this text either contain biological/anatomical facts, OR is it a request to study human/animal anatomy, biology, physiology, or medicine?
+      (Note: If it is a recipe, programming code, or unrelated topic, reject it).
+      
       Return ONLY valid JSON in this exact format:
       {"isAnatomy": true, "reason": "Brief 1-sentence explanation"}
       
       TEXT TO ANALYZE:
       ${text.substring(0, 15000)} 
       `;
-      // (Note: We substring to 15000 chars to save your tokens during the quick validation check!)
 
       const result = await model.generateContent(prompt);
       const responseText = result.response.text();
@@ -150,7 +153,7 @@ export class AIService {
       this.handleAIError(error);
     }
   }
-  
+
   // 4. Generate Content
   async generateContent(
     prompt: string, 
