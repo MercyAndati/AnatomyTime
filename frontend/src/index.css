@@ -2,31 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* PROFESSIONAL DESIGN SYSTEM (Render / Google AI Studio Inspired)
+  Focuses on true neutrals (blacks/whites/greys) for structure, 
+  and preserves the signature blue for high-contrast accents.
 */
 
 @layer base {
   :root {
-    --background: 248 100% 98%;
-    --foreground: 222 47% 11%;
+    /* Pure white background for light mode */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    /* Very light grey for cards to separate them from the pure white background */
+    --card: 0 0% 98%;
+    --card-foreground: 240 10% 3.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 240 10% 3.9%;
 
+    /* Signature Blue (Kept from original) */
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
     
-    --primary-glow: 217 91% 70%;
+    /* Reduced glow intensity */
+    --primary-glow: 217 91% 60%;
 
-    --secondary: 214 32% 91%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
 
-    --muted: 214 32% 91%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
 
     --accent: 217 91% 60%;
     --accent-foreground: 0 0% 100%;
@@ -37,42 +42,46 @@ All colors MUST be HSL.
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    /* Sharp, neutral borders */
+    --border: 240 5.9% 80%;
+    --input: 240 5.9% 90%;
     --ring: 217 91% 60%;
 
-    --radius: 1rem;
+    /* TIGHTER CORNERS for professional feel (was 1rem) */
+    --radius: 0.5rem;
     
-    /* Glass effect variables */
-    --glass-bg: 0 0% 100% / 0.7;
-    --glass-border: 217 91% 60% / 0.2;
-    --glass-shadow: 217 91% 60% / 0.1;
+    /* Redefined Glass/Surface variables (Less glow, more structure) */
+    --glass-bg: 0 0% 100% / 0.9;
+    --glass-border: 240 5.9% 90%;
+    --glass-shadow: 240 5.9% 10% / 0.05;
     
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 70%));
-    --gradient-hero: linear-gradient(135deg, hsl(217 91% 60% / 0.1), hsl(217 91% 70% / 0.05));
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 50%));
+    --gradient-hero: linear-gradient(135deg, hsl(217 91% 60% / 0.05), transparent);
   }
 
   .dark {
-    --background: 222 84% 3%;
-    --foreground: 210 40% 98%;
+    /* Deep charcoal/black for dark mode (Google AI Studio style) */
+    --background: 0 0% 4%; 
+    --foreground: 0 0% 98%;
 
-    --card: 222 84% 5%;
-    --card-foreground: 210 40% 98%;
+    /* Slightly lighter grey for floating cards (Render style) */
+    --card: 0 0% 9%; 
+    --card-foreground: 0 0% 98%;
 
-    --popover: 222 84% 5%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 98%;
 
+    /* Signature Blue */
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
     
-    --primary-glow: 217 91% 70%;
+    --primary-glow: 217 91% 60%;
 
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 240 5% 64.9%;
 
     --accent: 217 91% 60%;
     --accent-foreground: 0 0% 100%;
@@ -81,20 +90,20 @@ All colors MUST be HSL.
     --success-foreground: 0 0% 100%;
 
     --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
+    /* Subtle, dark neutral borders */
+    --border: 0 0% 15%; 
+    --input: 0 0% 15%;
     --ring: 217 91% 60%;
     
-    /* Glass effect variables for dark mode */
-    --glass-bg: 222 84% 5% / 0.6;
-    --glass-border: 217 91% 60% / 0.2;
-    --glass-shadow: 217 91% 60% / 0.2;
+    /* Redefined Glass/Surface variables for Dark Mode */
+    --glass-bg: 0 0% 9% / 0.8;
+    --glass-border: 0 0% 15%;
+    --glass-shadow: 0 0% 0% / 0.5;
     
-    /* Gradients for dark mode */
     --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 50%));
-    --gradient-hero: linear-gradient(135deg, hsl(217 91% 60% / 0.1), hsl(217 91% 50% / 0.05));
+    --gradient-hero: linear-gradient(135deg, hsl(217 91% 60% / 0.1), transparent);
   }
 }
 
@@ -110,25 +119,27 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  /* Glass morphism utilities */
+  /* Refactored 'glass' to act as a professional 'Surface' layer 
+    instead of a blurry glowing bubble. 
+  */
   .glass {
     background: hsl(var(--glass-bg));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border: 1px solid hsl(var(--glass-border));
-    box-shadow: 0 8px 32px 0 hsl(var(--glass-shadow));
+    box-shadow: 0 4px 12px 0 hsl(var(--glass-shadow));
   }
   
   .glass-card {
-    @apply glass rounded-2xl p-6 transition-all duration-300;
+    @apply glass rounded-lg p-6 transition-all duration-200;
   }
   
+  /* Replaced floating hover effect with a sleek border highlight */
   .glass-card:hover {
-    box-shadow: 0 12px 48px 0 hsl(var(--glass-shadow));
-    transform: translateY(-2px);
+    border-color: hsl(var(--primary) / 0.5);
+    box-shadow: 0 8px 24px 0 hsl(var(--glass-shadow));
   }
   
-  /* Gradient utilities */
   .gradient-primary {
     background: var(--gradient-primary);
   }
@@ -137,32 +148,27 @@ All colors MUST be HSL.
     background: var(--gradient-hero);
   }
   
-  /* Animation utilities */
   .animate-fade-in {
-    animation: fadeIn 0.6s ease-out forwards;
+    animation: fadeIn 0.4s ease-out forwards;
   }
   
   .animate-slide-up {
-    animation: slideUp 0.6s ease-out forwards;
+    animation: slideUp 0.4s ease-out forwards;
   }
   
   .animate-scale-in {
-    animation: scaleIn 0.4s ease-out forwards;
+    animation: scaleIn 0.3s ease-out forwards;
   }
   
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
   
   @keyframes slideUp {
     from {
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(10px);
     }
     to {
       opacity: 1;
@@ -173,7 +179,7 @@ All colors MUST be HSL.
   @keyframes scaleIn {
     from {
       opacity: 0;
-      transform: scale(0.95);
+      transform: scale(0.98);
     }
     to {
       opacity: 1;

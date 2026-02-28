@@ -2,7 +2,11 @@ import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Heart, Bone, Eye, ArrowLeft, CheckCircle, XCircle, Trash2, Target, Clock, BarChart, HelpCircle } from "lucide-react";
+import { 
+  Brain, Heart, Bone, Eye, ArrowLeft, CheckCircle, 
+  XCircle, Trash2, Target, Clock, BarChart, 
+  HelpCircle, Maximize2, ZoomIn, ZoomOut, X 
+} from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
@@ -70,8 +74,12 @@ const ImageMapQuiz = () => {
   const [quizStartTime, setQuizStartTime] = useState<number>(0);
   const [timeSpent, setTimeSpent] = useState(0);
 
-  // State for preventing double clicks
+  // Interaction State
   const [isTransitioning, setIsTransitioning] = useState(false);
+  
+  // ✅ NEW: Full Screen Image Modal State
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [imageZoom, setImageZoom] = useState(1);
 
   // Mobile state
   const [isMobile, setIsMobile] = useState(false);
@@ -167,6 +175,8 @@ const ImageMapQuiz = () => {
     setClickedRegions({});
     setShowReview(false);
     setShowResults(false);
+    setIsImageModalOpen(false); // Reset modal
+    setImageZoom(1);            // Reset zoom
     setScore(0);
     setTotal(quiz.regions.length);
     setQuizStartTime(Date.now());
@@ -185,20 +195,17 @@ const ImageMapQuiz = () => {
     setIsTransitioning(true);
     const currentQ = selectedQuiz.regions[currentRegion];
 
-    // Save user answer
     setUserAnswers(prev => ({
       ...prev,
       [currentQ.id]: regionId
     }));
 
-    // Check if correct immediately
     const isCorrect = regionId === currentQ.id;
     setGradedAnswers(prev => ({
       ...prev,
       [currentQ.id]: isCorrect
     }));
 
-    // Update clicked regions with color feedback
     setClickedRegions(prev => ({
       ...prev,
       [regionId]: isCorrect ? 'correct' : 'incorrect'
@@ -206,7 +213,6 @@ const ImageMapQuiz = () => {
 
     setSelectedAnswer(regionId);
 
-    // Move to next question or show results
     setTimeout(() => {
       if (currentRegion < selectedQuiz.regions.length - 1) {
         setCurrentRegion(prev => prev + 1);
@@ -219,7 +225,7 @@ const ImageMapQuiz = () => {
         submitQuiz(finalGradedAnswers, finalUserAnswers);
         setIsTransitioning(false);
       }
-    }, 1200); // Reduced from 1500ms
+    }, 1200); 
   };
 
   // Submit quiz to backend
@@ -279,19 +285,16 @@ const ImageMapQuiz = () => {
     const naturalWidth = img.naturalWidth;
     const naturalHeight = img.naturalHeight;
     
-    // Get container dimensions
     const container = imageContainerRef.current;
     if (!container) return;
     
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
     
-    // Calculate scale to fit image in container while maintaining aspect ratio
     const scaleX = containerWidth / naturalWidth;
     const scaleY = containerHeight / naturalHeight;
     const scale = Math.min(scaleX, scaleY);
     
-    // Calculate displayed dimensions
     const displayWidth = naturalWidth * scale;
     const displayHeight = naturalHeight * scale;
     
@@ -301,7 +304,6 @@ const ImageMapQuiz = () => {
     setImageLoaded(true);
   };
 
-  // Recalculate on resize
   useEffect(() => {
     const handleResize = () => {
       if (imageRef.current && imageLoaded) {
@@ -313,7 +315,6 @@ const ImageMapQuiz = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [imageLoaded]);
 
-  // If viewing a specific quiz by ID
   useEffect(() => {
     if (id) {
       const fetchQuizById = async () => {
@@ -328,14 +329,12 @@ const ImageMapQuiz = () => {
     }
   }, [id]);
 
-  // Format time
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Calculate region points for display
   const getRegionPoints = (region: Region) => {
     if (!region.points || !scaleFactor.x || !scaleFactor.y) return null;
     
@@ -347,19 +346,16 @@ const ImageMapQuiz = () => {
       
       if (pointsArray.length === 0) return null;
       
-      // Calculate bounds
       const minX = Math.min(...pointsArray.map(p => p.x));
       const maxX = Math.max(...pointsArray.map(p => p.x));
       const minY = Math.min(...pointsArray.map(p => p.y));
       const maxY = Math.max(...pointsArray.map(p => p.y));
       
-      // Scale points for display
       const scaledMinX = minX * scaleFactor.x;
       const scaledMaxX = maxX * scaleFactor.x;
       const scaledMinY = minY * scaleFactor.y;
       const scaledMaxY = maxY * scaleFactor.y;
       
-      // Calculate center and radius
       const cx = (scaledMinX + scaledMaxX) / 2;
       const cy = (scaledMinY + scaledMaxY) / 2;
       const radius = Math.max(scaledMaxX - scaledMinX, scaledMaxY - scaledMinY) / 2;
@@ -370,6 +366,80 @@ const ImageMapQuiz = () => {
       return null;
     }
   };
+
+  // ✅ NEW: Reusable Component for the Full Screen Image Modal
+  const renderFullScreenModal = () => {
+    if (!isImageModalOpen || !selectedQuiz) return null;
+
+    return (
+      <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        {/* Modal Toolbar */}
+        <div className="flex items-center justify-between p-3 md:p-4 border-b border-primary/20 bg-card/50 shadow-sm">
+          <div className="flex items-center gap-1 md:gap-3 bg-muted/50 p-1 md:p-1.5 rounded-lg border border-primary/10">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setImageZoom(prev => Math.max(0.5, prev - 0.25))}
+              className="hover:bg-background h-8 w-8 md:h-10 md:w-10"
+              title="Zoom Out"
+            >
+              <ZoomOut className="h-4 w-4 md:h-5 md:w-5" />
+            </Button>
+            <span className="text-xs md:text-sm font-semibold w-12 text-center select-none">
+              {Math.round(imageZoom * 100)}%
+            </span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setImageZoom(prev => Math.min(4, prev + 0.25))}
+              className="hover:bg-background h-8 w-8 md:h-10 md:w-10"
+              title="Zoom In"
+            >
+              <ZoomIn className="h-4 w-4 md:h-5 md:w-5" />
+            </Button>
+            <div className="w-px h-6 bg-primary/20 mx-1 hidden sm:block"></div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setImageZoom(1)} 
+              className="hidden sm:flex hover:bg-background text-xs"
+            >
+              Reset
+            </Button>
+          </div>
+
+          <Button 
+            variant="destructive" 
+            size={isMobile ? "sm" : "default"} 
+            onClick={() => { setIsImageModalOpen(false); setImageZoom(1); }}
+            className="flex items-center gap-2"
+          >
+            <X className="h-4 w-4" />
+            <span className="hidden sm:inline">Close</span>
+          </Button>
+        </div>
+
+        {/* Modal Image Container (Handles the overflow scrolling) */}
+        <div className="flex-1 overflow-auto p-4 flex items-start justify-center cursor-grab active:cursor-grabbing custom-scrollbar">
+          <div className="min-w-full flex justify-center h-max pb-10">
+            <img
+              src={`${BACKEND_URL}${selectedQuiz.labeledImageUrl}`}
+              alt="Full screen labeled"
+              className="transition-all duration-200 rounded-lg shadow-2xl border border-primary/20 bg-white"
+              style={{ 
+                width: `${imageZoom * 100}%`,
+                maxWidth: imageZoom <= 1 ? '100%' : 'none',
+                height: 'auto',
+                objectFit: 'contain'
+              }}
+              draggable="false"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
 
   // If no quiz selected, show quiz selection
   if (!selectedQuiz) {
@@ -483,6 +553,7 @@ const ImageMapQuiz = () => {
     return (
       <div className="min-h-screen pb-20">
         <Navigation />
+        {renderFullScreenModal()}
 
         <div className="container mx-auto px-4 pt-24 md:pt-32">
           <div className="max-w-4xl mx-auto animate-fade-in">
@@ -507,13 +578,24 @@ const ImageMapQuiz = () => {
                 </p>
               </div>
 
-              {/* Show labeled image in review mode */}
-              <div className="mt-2 md:mt-4">
+              {/* ✅ NEW: Clickable Labeled Image for Review Mode */}
+              <div 
+                className="mt-2 md:mt-4 relative group cursor-pointer overflow-hidden rounded-lg border-2 border-primary/20 bg-muted/10"
+                onClick={() => setIsImageModalOpen(true)}
+              >
                 <img
                   src={`${BACKEND_URL}${selectedQuiz.labeledImageUrl}`}
                   alt={`${selectedQuiz.title} - Labeled`}
-                  className="w-full rounded-lg border-2 border-primary/20"
+                  className="w-full transition-all duration-300 group-hover:scale-[1.01] group-hover:opacity-60"
                 />
+                <div className="absolute top-3 right-3 md:inset-0 md:flex items-center justify-center opacity-90 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Badge className="bg-black/80 text-white shadow-xl flex items-center gap-1.5 md:gap-2 py-1.5 px-3 backdrop-blur-md md:scale-125">
+                    <Maximize2 className="h-3 w-3 md:h-4 md:w-4" />
+                    <span className="text-xs md:text-sm font-medium">
+                      {isMobile ? "Tap to Enlarge" : "Click to Enlarge"}
+                    </span>
+                  </Badge>
+                </div>
               </div>
 
               <div className="space-y-3 md:space-y-4">
@@ -581,6 +663,7 @@ const ImageMapQuiz = () => {
   return (
     <div className="min-h-screen pb-20">
       <Navigation />
+      {renderFullScreenModal()}
 
       <div className="container mx-auto px-4 pt-24 md:pt-32">
         <div className="animate-fade-in">
@@ -780,7 +863,6 @@ const ImageMapQuiz = () => {
                           const points = getRegionPoints(region);
                           if (!points) return null;
 
-                          // Determine colors - CYAN/TRANSPARENT for unclicked
                           let fillColor = "rgba(123, 231, 245, 0.3)"; 
                           let strokeColor = "rgba(102, 243, 243, 0.7)";
                           let strokeWidth = 1;
@@ -818,14 +900,12 @@ const ImageMapQuiz = () => {
                       </svg>
                     )}
 
-                    {/* Transition Overlay - Simplified */}
+                    {/* Transition Overlay */}
                     {isTransitioning && (
                       <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px] flex items-center justify-center transition-opacity duration-300">
                         <div className="flex flex-col items-center gap-3">
                           <div className="relative">
-                            {/* Simplified spinner without white background */}
                             <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/30 border-t-white"></div>
-                            {/* Result indicator */}
                             {clickedRegions[selectedQuiz.regions[currentRegion].id] && (
                               <div className={`absolute inset-0 flex items-center justify-center text-2xl ${
                                 clickedRegions[selectedQuiz.regions[currentRegion].id] === 'correct' 
@@ -874,13 +954,24 @@ const ImageMapQuiz = () => {
                 </p>
               </div>
 
-              {/* Show labeled image */}
-              <div className="mt-2 md:mt-4">
+              {/* ✅ NEW: Clickable Labeled Image for Results Page */}
+              <div 
+                className="mt-2 md:mt-4 relative group cursor-pointer max-w-lg mx-auto overflow-hidden rounded-lg border-2 border-primary/20 bg-muted/10"
+                onClick={() => setIsImageModalOpen(true)}
+              >
                 <img
                   src={`${BACKEND_URL}${selectedQuiz.labeledImageUrl}`}
                   alt={`${selectedQuiz.title} - Labeled`}
-                  className="w-full max-w-md mx-auto rounded-lg border-2 border-primary/20"
+                  className="w-full transition-all duration-300 group-hover:scale-[1.01] group-hover:opacity-60"
                 />
+                <div className="absolute top-3 right-3 md:inset-0 md:flex items-center justify-center opacity-90 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Badge className="bg-black/80 text-white shadow-xl flex items-center gap-1.5 md:gap-2 py-1.5 px-3 backdrop-blur-md md:scale-125">
+                    <Maximize2 className="h-3 w-3 md:h-4 md:w-4" />
+                    <span className="text-xs md:text-sm font-medium">
+                      {isMobile ? "Tap to Enlarge" : "Click to Enlarge"}
+                    </span>
+                  </Badge>
+                </div>
               </div>
 
               <div className="space-y-2 md:space-y-3 max-w-md mx-auto">
@@ -921,7 +1012,6 @@ const ImageMapQuiz = () => {
                       return;
                     }
                     
-                    // Get user from localStorage
                     const userData = localStorage.getItem('user');
                     if (!userData) {
                       toast({
@@ -944,7 +1034,6 @@ const ImageMapQuiz = () => {
                       return;
                     }
                     
-                    // Call the NEW community sharing endpoint
                     const response = await axios.post(
                       `${BACKEND_URL}/api/community/share`,
                       {

@@ -315,6 +315,16 @@ const Quiz = () => {
           </Button>
         </div>
       </div>
+      {/* AI Disclaimer Footer */}
+      <div className="mt-8 text-center px-4">
+        <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
+          <AlertCircle className="h-3 w-3 flex-shrink-0" />
+          AI-generated content is intended as a study aid, not a replacement for official medical texts.
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Looking for diagram identification? Visit our hand-crafted <span onClick={() => navigate('/image-map')} className="text-primary hover:underline cursor-pointer">Image Map module</span>.
+        </p>
+      </div>
     </div>
   );
 };
