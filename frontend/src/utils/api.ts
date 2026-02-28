@@ -29,7 +29,8 @@ class ApiClient {
   ): Promise<T> {
     const token = localStorage.getItem('token');
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.defaultTimeout);
+    // ✅ INCREASE TIMEOUT HERE TOO: Changed to 300,000 (5 minutes) for AI Grading
+    const timeoutId = setTimeout(() => controller.abort(), 300000);
 
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
@@ -66,7 +67,9 @@ class ApiClient {
   private async requestForm<T>(endpoint: string, formData: FormData): Promise<T> {
     const token = localStorage.getItem('token');
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    // ✅ INCREASED TIMEOUT: Changed to 5 minutes (300,000 ms) for large AI processing
+    const timeoutId = setTimeout(() => controller.abort(), 300000);
 
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
@@ -220,6 +223,17 @@ class ApiClient {
     return this.request<{ attempts: QuizAttempt[] }>('/quiz/attempts/my-all'); // We'll need to add this endpoint
   }
 
+  // Validation endpoint
+  async validateFile(formData: FormData): Promise<{
+    valid: boolean;
+    message: string;
+    metadata: { fileName: string; fileSize: number; fileType: string; wordCount: number };
+    anatomyTopics: string[];
+    suggestions: string[];
+  }> {
+    return this.requestForm('/upload/validate', formData);
+  }
+  
   // Community endpoints
   async getCommunityPosts(category?: string): Promise<CommunityPostsResponse> {
     const url = category && category !== 'All' ? `/community?category=${category}` : '/community';
@@ -271,6 +285,7 @@ class ApiClient {
       });
     }
   }
+  
   // Note endpoints
   async createNote(data: { title: string; content?: string; tags?: string }, file?: File): Promise<{ message: string; note: Note }> {
   if (file) {

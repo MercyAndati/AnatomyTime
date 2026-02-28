@@ -15,13 +15,10 @@ import imageMapRoutes from './routes/imageMap.routes';
 import flashcardRoutes from './routes/flashcard.routes';
 import communityRoutes from './routes/community.routes';
 import adminRoutes from './routes/admin.routes';
-import uploadRoutes from './routes/upload.routes';
 import noteRoutes from './routes/note.routes';
 
 // Services
 import { AIService } from './services/ai.service';
-import { ContentFilterService } from './services/contentFilter.service';
-import { FileExtractorService } from './services/fileExtractor.service';
 
 dotenv.config();
 
@@ -68,13 +65,11 @@ app.use(cors({
 
 // Body parsing
 app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Initialize services and attach to app
 // ADC will automatically use GOOGLE_APPLICATION_CREDENTIALS
 app.locals.aiService = new AIService(); // No API key needed!
-app.locals.contentFilter = new ContentFilterService();
-app.locals.fileExtractor = new FileExtractorService();
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -83,7 +78,6 @@ app.use('/api/image-map', imageMapRoutes);
 app.use('/api/flashcards', flashcardRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/upload', uploadRoutes);
 app.use('/api/notes', noteRoutes);
 
 // Serve uploaded files

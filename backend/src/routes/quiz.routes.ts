@@ -8,8 +8,6 @@ import Quiz from '../models/Quiz';
 import QuizAttempt from '../models/QuizAttempt';
 import CommunityPost from '../models/CommunityPost';
 import { AIService } from '../services/ai.service';
-import { ContentFilterService } from '../services/contentFilter.service';
-import { FileExtractorService } from '../services/fileExtractor.service';
 import { AIGradingService } from '../services/aiGrading.service';
 
 const router = express.Router();
@@ -32,17 +30,19 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: 130 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PPTX
+      'application/vnd.ms-powerpoint', // PPT
       'text/plain'
     ];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Supported: PDF, DOCX, TXT') as any, false);
+      cb(new Error('Invalid file type. Supported: PDF, DOCX, PPTX, TXT') as any, false);
     }
   }
 });
@@ -64,302 +64,217 @@ const verifyToken = (req: any, res: any, next: any) => {
 
 // Get services from app locals
 const getAIService = (req: any): AIService => req.app.locals.aiService;
-const getContentFilter = (req: any): ContentFilterService => req.app.locals.contentFilter;
-const getFileExtractor = (req: any): FileExtractorService => req.app.locals.fileExtractor;
 const getGradingService = (req: any): AIGradingService => { return new AIGradingService(); };
 
 // Generate quiz from prompt and/or file
 router.post('/generate', verifyToken, upload.single('file'), async (req: any, res) => {
   const aiService = getAIService(req);
-  const contentFilter = getContentFilter(req);
-  const fileExtractor = getFileExtractor(req);
+
+  let geminiFile: any = null;
 
   try {
     const { 
       prompt, 
       title, 
-      topic, 
+      topic,
+      focusTopic,
       numQuestions = 10, 
       difficulty = 'standard',
       timeLimitMinutes,
       isRapid = false
     } = req.body;
 
-    let extractedContent = '';
-    let fileMetadata = null;
-
-    // Extract text from uploaded file
-    if (req.file) {
-      try {
-        const result = await fileExtractor.extractText(
-          req.file.path,
-          req.file.mimetype,
-          req.file.originalname
-        );
-        extractedContent = result.text;
-        fileMetadata = result.metadata;
-        
-        console.log('Extracted content length:', extractedContent.length);
-        console.log('First 200 chars:', extractedContent.substring(0, 200));
-      } catch (extractError) {
-        const errorMessage = extractError instanceof Error ? extractError.message : 'Unknown error';
-        return res.status(400).json({ 
-          message: 'Failed to extract text from file',
-          error: errorMessage 
-        });
-      }
+    if (!prompt && !req.file && !topic) {
+      return res.status(400).json({ message: 'Please provide a prompt, topic, or upload study materials' });
     }
 
-    // Validate input
-    if (!prompt && !extractedContent && !topic) {
+    // ==========================================
+    // THE "GREEDY STUDENT" CHECK
+    // ==========================================
+    const requestedQuestions = parseInt(numQuestions);
+    if (isNaN(requestedQuestions) || requestedQuestions < 1 || requestedQuestions > 50) {
       return res.status(400).json({ 
-        message: 'Please provide a prompt, topic, or upload study materials' 
+        message: 'Invalid request', 
+        error: 'Please request between 1 and 50 questions.' 
       });
     }
 
-    // For file uploads, ONLY validate the extracted content
-    let contentToValidate = '';
-    let aiPromptContent = '';
-
-    if (extractedContent) {
-      contentToValidate = extractedContent;
-      aiPromptContent = extractedContent;
-      console.log('Validating file content only');
-    } else {
-      contentToValidate = prompt || `Create a quiz about ${topic || 'human anatomy'}`;
-      aiPromptContent = prompt || `Create a quiz about ${topic || 'human anatomy'}`;
-      console.log('Validating prompt/topic');
-    }
-
-    console.log('Content to validate length:', contentToValidate.length);
-    console.log('Content preview:', contentToValidate.substring(0, 100));
-
-    // CONTENT FILTERING
-    const filterResult = await contentFilter.filterContent(contentToValidate);
-
-    // If we have file content, do a quick anatomy check
-    if (extractedContent) {
-      const anatomyKeywords = [
-        'heart', 'brain', 'bone', 'muscle', 'nerve', 'artery', 'vein',
-        'skull', 'spine', 'rib', 'lung', 'liver', 'kidney', 'stomach',
-        'anatomy', 'skeleton', 'cardiac', 'neuron', 'aorta', 'blood',
-        'femur', 'tibia', 'humerus', 'clavicle', 'chamber', 'ventricle',
-        'atrium', 'cranial', 'spinal', 'thoracic', 'abdominal'
-      ];
+    // ==========================================
+    // PHASE 1: IF TEXT ONLY (No File)
+    // ==========================================
+    if (!req.file) {
+      const contentToValidate = prompt || topic || '';
       
-      const hasAnatomyTerms = anatomyKeywords.some(term => 
-        extractedContent.toLowerCase().includes(term)
-      );
+      console.log("🕵️ Running AI Bouncer on text input...");
+      const validation = await aiService.validateTextContent(contentToValidate);
       
-      console.log('Has anatomy terms:', hasAnatomyTerms);
-      
-      if (!hasAnatomyTerms) {
+      if (!validation.isAnatomy) {
         return res.status(400).json({
           message: 'Content validation failed',
-          error: 'No anatomy terminology detected in the uploaded file',
-          suggestions: [
-            'Ensure your file contains anatomy-related content',
-            'Include terms like: heart, brain, bones, muscles, etc.',
-            'Try uploading anatomy study notes or textbook excerpts'
-          ]
+          error: `The AI rejected this text: ${validation.reason}`
         });
       }
+      console.log("✅ AI Text Bouncer approved the notes!");
     }
 
-    // If filter fails but we have file content, do secondary check
-    if (!filterResult.isValid && extractedContent) {
-      console.log('Filter failed but we have file content - doing secondary check');
-      
-      const anatomyKeywords = [
-        'heart', 'brain', 'bone', 'muscle', 'nerve', 'artery', 'vein',
-        'anatomy', 'skeleton', 'cardiac', 'neuron', 'aorta', 'blood',
-        'chamber', 'ventricle', 'atrium', 'spinal', 'thoracic'
-      ];
-      
-      const foundTerms = anatomyKeywords.filter(term => 
-        extractedContent.toLowerCase().includes(term)
+    // ==========================================
+    // PHASE 2: IF FILE UPLOADED (The Cloud Pipeline)
+    // ==========================================
+    if (req.file) {
+      // 1. Upload to Gemini
+      geminiFile = await aiService.uploadFileToGemini(
+        req.file.path, 
+        req.file.mimetype, 
+        req.file.originalname
       );
+
+      if (!geminiFile) throw new Error("Failed to upload file to AI servers.");
+
+      // 2. The AI Bouncer Validation
+      console.log("🕵️ Running AI Bouncer validation...");
+      // ✅ CHANGED: Use geminiFile.mimeType instead of req.file.mimetype
+      const validation = await aiService.validateFileContent(geminiFile.uri, geminiFile.mimeType);
       
-      if (foundTerms.length >= 3) {
-        console.log('Secondary check passed - found anatomy terms:', foundTerms);
-        filterResult.isValid = true;
-        filterResult.detectedTopics = ['Anatomy'];
-        filterResult.confidence = 0.8;
-      } else {
+      if (!validation.isAnatomy) {
         return res.status(400).json({
-          message: 'Content validation failed',
-          error: 'Uploaded file does not contain sufficient anatomy content',
-          detectedTerms: foundTerms,
-          suggestions: [
-            'Please upload anatomy study materials',
-            'Include terms like: heart, brain, bones, muscles',
-            'Make sure the file contains actual anatomy text'
-          ]
+          message: 'Anatomy Content Not Detected',
+          error: `The AI rejected this file: ${validation.reason}`
         });
       }
+      console.log("✅ AI Bouncer approved the file!");
     }
 
-    // If still not valid after checks
-    if (!filterResult.isValid) {
-      return res.status(400).json({
-        message: 'Content validation failed',
-        error: filterResult.reason || 'Please provide anatomy-related content',
-        detectedTopics: filterResult.detectedTopics || [],
-        suggestions: filterResult.suggestions || [
-          'Try topics like: heart anatomy, skeletal system, brain structure',
-          'Upload anatomy study materials'
-        ]
-      });
-    }
+    // ==========================================
+    // PHASE 3: GENERATION
+    // ==========================================
+    const focusInstruction = focusTopic 
+      ? `\nCRITICAL INSTRUCTION: The user specifically requested to focus ONLY on: "${focusTopic}". Ignore irrelevant sections.` 
+      : '';
 
-    // Prepare AI prompt
     const aiPrompt = `
 You are an expert anatomy educator. Create a ${difficulty} difficulty anatomy quiz.
-
-SOURCE CONTENT:
-${aiPromptContent}
-
-DETECTED ANATOMY TOPICS:
-${filterResult.detectedTopics?.join(', ') || 'Anatomy'}
+${req.file ? `Base the quiz ONLY on the provided document.` : `Base the quiz on this topic: ${prompt || topic}`}
+${focusInstruction}
 
 REQUIREMENTS:
-1. Create ${numQuestions} questions about human anatomy ONLY
-2. Focus on: ${filterResult.detectedTopics?.join(', ') || 'human anatomy'}
-3. Include structures, functions, and anatomical relationships
-4. Questions must be clinically relevant
-5. Mix multiple-choice and free-response questions
+1. Create exactly ${numQuestions} questions.
+2. Mix multiple-choice and free-response questions.
+3. EXPLANATIONS: Produce appropriate explanations where necessary. If the question is easy/direct, use 1 brief sentence. If it is a hard question requiring context, use 2-3 sentences max. DO NOT write massive paragraphs.
+4. CRITICAL STRICT RULE: You must complete the entire JSON object. Pace your output length to guarantee the final closing brackets ']}' are printed.
 
 OUTPUT FORMAT (STRICT JSON):
 {
   "questions": [
     {
       "id": "q1",
-      "type": "multiple-choice",
+      "type": "multiple-choice", 
       "text": "Question text here",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctAnswer": "Option B",
-      "explanation": "Detailed explanation why this is correct",
-      "points": 1
-    },
-    {
-      "id": "q2",
-      "type": "free-response",
-      "text": "Question text here",
-      "correctAnswer": "Expected key answer",
-      "explanation": "Detailed explanation",
+      "options": ["Option A", "Option B", "Option C", "Option D"], 
+      "correctAnswer": "The exact correct answer here", 
+      "explanation": "Brief, appropriate explanation here.",
       "points": 1
     }
   ],
-  "title": "Quiz title based on content",
-  "topic": "${filterResult.detectedTopics?.[0] || 'Anatomy'}",
+  "title": "Generate a short, specific 3-to-5 word title based on the core topic of the document or prompt",
+  "topic": "Generate a 1-to-2 word category (e.g., Neurology, Osteology)",
   "difficulty": "${difficulty}"
 }
 
-Return ONLY valid JSON. No other text.
+Return ONLY valid JSON. No markdown formatting.
 `;
 
-    // Generate quiz with AI
-    const aiResponse = await aiService.generateContent(aiPrompt, {
-      temperature: 0.7,
-      maxTokens: 4000
-    });
+    // Send the generation request (passing the fileUri if we have one)
+    const aiResponse = await aiService.generateContent(
+      aiPrompt, 
+      { temperature: 0.7, maxTokens: 8192 }, // ✅ Bumped to absolute maximum
+      geminiFile?.uri,
+      geminiFile?.mimeType
+    );
 
-    // Parse AI response
+    // ==========================================
+    // PHASE 4: PARSE AND SANITIZE JSON
+    // ==========================================
     let quizData;
     try {
-      const jsonMatch = aiResponse.text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('Invalid AI response format');
+      // 1. Strip out annoying Markdown formatting that AI sometimes adds
+      let cleanText = aiResponse.text.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
       
-      quizData = JSON.parse(jsonMatch[0]);
+      // 2. Safely extract just the JSON object
+      const startIndex = cleanText.indexOf('{');
+      const endIndex = cleanText.lastIndexOf('}');
       
-      if (!quizData.questions || !Array.isArray(quizData.questions)) {
-        throw new Error('Missing questions array');
+      if (startIndex === -1 || endIndex === -1) {
+        throw new Error('Could not find JSON object in AI response');
       }
-
-      // Validate each question has required fields
+      
+      const jsonString = cleanText.substring(startIndex, endIndex + 1);
+      quizData = JSON.parse(jsonString);
+      
+      // 3. THE SAFETY NET: Ensure every question has the required DB fields
       quizData.questions = quizData.questions.map((q: any, index: number) => ({
+        ...q,
         id: q.id || `q${index + 1}`,
         type: q.type || 'multiple-choice',
-        text: q.text || 'Anatomy question',
-        options: q.options || [],
-        correctAnswer: q.correctAnswer || '',
-        explanation: q.explanation || '',
+        correctAnswer: q.correctAnswer || q.answer || 'Answer not provided by AI', 
+        options: Array.isArray(q.options) ? q.options : [],
+        explanation: q.explanation || 'No explanation provided.',
         points: q.points || 1
       }));
 
     } catch (parseError) {
-      console.error('Failed to parse AI response:', parseError);
+      // 🚨 IF IT FAILS NOW, WE WILL SEE EXACTLY WHAT THE AI WROTE!
+      console.error("\n❌ ================= JSON PARSE FAILED =================");
+      console.error("RAW AI OUTPUT THAT CAUSED THE CRASH:\n", aiResponse.text);
+      console.error("========================================================\n");
       throw new Error('AI response was invalid. Please try again.');
-    }
-
-    // Validate generated content
-    const validationResult = await contentFilter.validateAIContent(quizData);
-    if (!validationResult.isValid) {
-      console.warn('Quiz validation issues:', validationResult.issues);
     }
 
     // Create quiz in database
     const quiz = new Quiz({
-      title: title || quizData.title || topic || filterResult.detectedTopics?.[0] || 'Anatomy Quiz',
-      topic: quizData.topic || topic || filterResult.detectedTopics?.[0] || 'General Anatomy',
+      title: title || quizData.title || 'Anatomy Quiz',
+      topic: quizData.topic || topic || 'General Anatomy',
       description: `Generated from ${prompt ? 'prompt' : 'uploaded materials'}`,
       questions: quizData.questions,
       totalPoints: quizData.questions.reduce((sum: number, q: any) => sum + (q.points || 1), 0),
       difficulty,
       type: 'standard',
       createdBy: req.userId,
-      sourcePrompt: prompt,
-      sourceFileUrl: req.file ? `/uploads/${req.file.filename}` : undefined,
       timeLimitMinutes: isRapid ? (timeLimitMinutes ? parseInt(timeLimitMinutes) : 5) : null,
       isPublic: false,
-      tags: [quizData.topic || topic || 'anatomy', difficulty, ...(filterResult.detectedTopics || [])].filter(Boolean)
     });
 
     await quiz.save();
-
-    // Clean up uploaded file
-    if (req.file) {
-      try { fs.unlinkSync(req.file.path); } catch (e) {}
-    }
 
     res.status(201).json({
       message: 'Quiz generated successfully',
       quiz: {
         id: quiz._id,
         title: quiz.title,
-        topic: quiz.topic,
-        questions: quiz.questions.map((q: any) => ({
-          id: q.id,
-          type: q.type,
-          text: q.text,
-          options: q.options || [],
-          points: q.points
-        })),
+        questions: quiz.questions,
         totalPoints: quiz.totalPoints,
         timeLimitMinutes: quiz.timeLimitMinutes,
-        isRapid: !!quiz.timeLimitMinutes
-      },
-      metadata: {
-        wordCount: fileMetadata?.wordCount,
-        fileType: fileMetadata?.fileType,
-        aiModel: aiResponse.model,
-        anatomyTopics: filterResult.detectedTopics
       }
     });
 
   } catch (error) {
-    console.error('Quiz generation error:', error);
-    
-    // Clean up uploaded file
-    if (req.file) {
-      try { fs.unlinkSync(req.file.path); } catch (e) {}
-    }
-    
+    // 🚦 Catch the custom Rate Limit error or standard errors
     const errorMessage = error instanceof Error ? error.message : 'Failed to generate quiz';
-    res.status(500).json({ 
-      message: 'Failed to generate quiz',
+    
+    // If it's a rate limit error, send a 429 status code back to the frontend
+    const statusCode = errorMessage.includes('SYSTEM_BUSY') ? 429 : 500;
+
+    res.status(statusCode).json({ 
+      message: errorMessage.replace('SYSTEM_BUSY: ', ''), 
       error: errorMessage 
     });
+  } finally {
+    // 🧹 CLEANUP: ALWAYS delete files to save space!
+    if (req.file) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {} // Delete local Multer file
+    }
+    if (geminiFile) {
+      await aiService.deleteFileFromGemini(geminiFile.name); // Delete from Google Cloud
+    }
   }
 });
 

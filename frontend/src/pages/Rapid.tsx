@@ -1,4 +1,3 @@
-// frontend/src/pages/Rapid.tsx
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, X, Zap, Loader2 } from "lucide-react";
+import { Upload, X, Zap, Loader2, Target } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { api } from "@/utils/api";
 
@@ -15,6 +14,7 @@ const Rapid = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState("");
+  const [focusTopic, setFocusTopic] = useState(""); // ✅ Added Focus Topic
   const [numQuestions, setNumQuestions] = useState("10");
   const [difficulty, setDifficulty] = useState("standard");
   const [questionType, setQuestionType] = useState("mixed");
@@ -25,10 +25,10 @@ const Rapid = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.size > 10 * 1024 * 1024) {
+      if (selectedFile.size > 130 * 1024 * 1024) { // Increased to 130MB
         toast({
           title: "File too large",
-          description: "Please upload a file smaller than 10MB",
+          description: "Please upload a file smaller than 130MB",
           variant: "destructive",
         });
         return;
@@ -43,6 +43,7 @@ const Rapid = () => {
 
   const removeFile = () => {
     setFile(null);
+    setFocusTopic("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -52,7 +53,7 @@ const Rapid = () => {
     if (!description && !file) {
       toast({
         title: "Missing information",
-        description: "Please enter a topic or upload a file",
+        description: "Please enter a topic, paste notes, or upload a file",
         variant: "destructive",
       });
       return;
@@ -70,6 +71,7 @@ const Rapid = () => {
         formData.append('difficulty', difficulty);
         formData.append('timeLimitMinutes', timer);
         formData.append('isRapid', 'true');
+        if (focusTopic) formData.append('focusTopic', focusTopic); // ✅ Send focus topic
         
         response = await api.generateQuizFromFile(formData);
       } else {
@@ -90,11 +92,23 @@ const Rapid = () => {
       navigate(`/quiz/${response.quiz.id}`);
 
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate quiz",
-        variant: "destructive",
-      });
+      const errMsg = error instanceof Error ? error.message : "Failed to generate quiz";
+      
+      if (errMsg.toLowerCase().includes('extract') || errMsg.toLowerCase().includes('parse')) {
+        toast({
+          title: "File Processing Failed",
+          description: "We couldn't read the text in that file. Please copy and paste your notes directly into the text box below.",
+          variant: "destructive",
+          duration: 6000,
+        });
+        removeFile();
+      } else {
+        toast({
+          title: "Validation Error",
+          description: errMsg,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -120,53 +134,71 @@ const Rapid = () => {
               ref={fileInputRef}
               type="file"
               onChange={handleFileChange}
-              accept=".pdf,.docx,.txt"
+              accept=".pdf,.docx,.ppt,.pptx,.txt" // ✅ Added PPT
               className="hidden"
             />
             
             {file ? (
-              <div className="flex items-center justify-between p-3 bg-muted rounded-md">
-                <span className="text-sm truncate">{file.name}</span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={removeFile}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center justify-between p-3 bg-muted rounded-md border border-primary/20">
+                  <span className="text-sm font-medium truncate">{file.name}</span>
+                  <Button size="sm" variant="ghost" onClick={removeFile} className="hover:text-destructive">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="bg-primary/5 p-4 rounded-md border border-primary/10">
+                  <Label className="text-sm flex items-center gap-2 mb-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    Narrow down the topic (Highly Recommended for large PPTs)
+                  </Label>
+                  <Input 
+                    placeholder="E.g., 'Focus only on the respiratory system'"
+                    value={focusTopic}
+                    onChange={(e) => setFocusTopic(e.target.value)}
+                    className="bg-background"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Tell the AI exactly what rapid-fire questions to generate from the document.
+                  </p>
+                </div>
               </div>
             ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors bg-muted/30"
               >
                 <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                 <p className="text-sm font-medium mb-1">Click to upload or drag and drop</p>
-                <p className="text-xs text-muted-foreground">PDF, DOCX, TXT (Max 10MB)</p>
+                <p className="text-xs text-muted-foreground">PDF, PPTX, DOCX, TXT (Max 130MB)</p>
               </div>
             )}
           </div>
 
-          {/* OR Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">OR</span>
-            </div>
-          </div>
+          {!file && (
+            <>
+              {/* OR Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">OR</span>
+                </div>
+              </div>
 
-          {/* Topic Description */}
-          <div className="border rounded-lg p-6 bg-card">
-            <h2 className="text-sm font-medium mb-3">Describe Your Topic</h2>
-            <Textarea
-              placeholder="E.g., 'Create a quiz about the muscular system, focus on major groups and their function'"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="min-h-[100px]"
-            />
-          </div>
+              {/* Topic Description */}
+              <div className="border rounded-lg p-6 bg-card">
+                <h2 className="text-sm font-medium mb-3">Paste Notes OR Describe Topic</h2>
+                <Textarea
+                  placeholder="Paste your notes here (no length limit) or describe a specific anatomy topic..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="min-h-[150px] resize-y"
+                />
+              </div>
+            </>
+          )}
 
           {/* 4-Column Settings Grid */}
           <div className="border rounded-lg p-6 bg-card">
@@ -230,17 +262,17 @@ const Rapid = () => {
           <Button 
             onClick={handleGenerate}
             disabled={loading || (!description && !file)}
-            className="w-full h-12 text-base"
+            className="w-full h-12 text-base gradient-primary"
           >
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generating...
+                Analyzing Content...
               </>
             ) : (
               <>
                 <Zap className="h-4 w-4 mr-2" />
-                Generate Quiz
+                Generate Rapid Quiz
               </>
             )}
           </Button>

@@ -4,10 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Clock, ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { Question } from "@/types";
+import { Textarea } from "@/components/ui/textarea";
 
 interface QuizSessionProps {
   quizId: string;
@@ -130,11 +130,11 @@ export const QuizSession = ({
               ))}
             </RadioGroup>
           ) : (
-            <Input
+            <Textarea
               value={answers[currentQuestion.id] || ""}
               onChange={(e) => handleAnswer(e.target.value)}
-              placeholder="Type your answer..."
-              className="w-full"
+              placeholder="Type your detailed answer here..."
+              className="w-full min-h-[150px] resize-y p-4 text-base leading-relaxed"
             />
           )}
         </div>

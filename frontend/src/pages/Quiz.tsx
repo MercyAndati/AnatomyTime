@@ -1,4 +1,3 @@
-// frontend/src/pages/Quiz.tsx
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, X, Sparkles, Loader2 } from "lucide-react";
+import { Upload, X, Sparkles, Loader2, Target, FileText, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { api } from "@/utils/api";
 
@@ -15,64 +14,67 @@ const Quiz = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState("");
+  const [focusTopic, setFocusTopic] = useState(""); 
   const [numQuestions, setNumQuestions] = useState("10");
   const [difficulty, setDifficulty] = useState("standard");
   const [questionType, setQuestionType] = useState("mixed");
+  
   const [file, setFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null); // ✅ Re-introduced inline error state
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const requiresFocusTopic = file ? file.size > 10 * 1024 * 1024 : false;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      if (selectedFile.size > 10 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "Please upload a file smaller than 10MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      setFile(selectedFile);
+    if (!selectedFile) return;
+
+    if (selectedFile.size > 150 * 1024 * 1024) { 
       toast({
-        title: "File uploaded",
-        description: selectedFile.name,
+        title: "File too large",
+        description: "Please upload a file smaller than 150MB",
+        variant: "destructive"
       });
+      return; 
     }
+
+    setFile(selectedFile);
+    setFileError(null); // ✅ Clear any previous errors
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const removeFile = () => {
     setFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    setFocusTopic("");
+    setFileError(null); // ✅ Clear errors on removal
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleGenerate = async () => {
-    // Validate input
     if (!description && !file) {
       toast({
         title: "Missing information",
-        description: "Please enter a topic or upload a file",
+        description: "Please enter a topic, paste notes, or upload a file",
         variant: "destructive",
       });
       return;
     }
 
     setLoading(true);
+    setFileError(null);
 
     try {
       let response;
 
       if (file) {
-        // Generate from file
         const formData = new FormData();
         formData.append('file', file);
         formData.append('numQuestions', numQuestions);
         formData.append('difficulty', difficulty);
+        if (focusTopic) formData.append('focusTopic', focusTopic);
         
         response = await api.generateQuizFromFile(formData);
       } else {
-        // Generate from topic
         response = await api.generateQuiz({
           prompt: description,
           numQuestions: parseInt(numQuestions),
@@ -85,19 +87,36 @@ const Quiz = () => {
         description: response.message,
       });
 
-      // Navigate to the quiz taking page
       navigate(`/quiz/${response.quiz.id}`);
 
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate quiz",
-        variant: "destructive",
-      });
+      const errMsg = error instanceof Error ? error.message : "Failed to generate quiz";
+      
+      // ✅ If there's a file, push the error to the UI box instead of a toast
+      if (file) {
+        setFileError(errMsg);
+      } else {
+        toast({
+          title: "Generation Failed",
+          description: errMsg,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
+
+    // ✅ Check if the number of questions is valid
+  const parsedNum = parseInt(numQuestions);
+  const isNumInvalid = isNaN(parsedNum) || parsedNum < 1 || parsedNum > 50;
+
+  const isGenerateDisabled = 
+    loading || 
+    (!description && !file) || 
+    (requiresFocusTopic && !focusTopic.trim()) ||
+    !!fileError ||
+    isNumInvalid; // ✅ Instantly disable button if number is out of bounds
 
   return (
     <div className="min-h-screen pb-20">
@@ -112,41 +131,92 @@ const Quiz = () => {
         </div>
 
         <div className="space-y-6">
-          {/* File Upload */}
+          {/* File Upload Area */}
           <div className="border rounded-lg p-6 bg-card">
             <h2 className="text-sm font-medium mb-3">Upload study materials (Optional)</h2>
             <input
               ref={fileInputRef}
               type="file"
               onChange={handleFileChange}
-              accept=".pdf,.docx,.txt"
+              accept=".pdf,.docx,.ppt,.pptx,.txt"
               className="hidden"
             />
             
             {file ? (
-              <div className="flex items-center justify-between p-3 bg-muted rounded-md">
-                <span className="text-sm truncate">{file.name}</span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={removeFile}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                
+                {/* File Info Banner - Changes to RED on error */}
+                <div className={`flex items-center justify-between p-3 rounded-md border transition-colors ${
+                  fileError ? 'bg-destructive/10 border-destructive/20' : 'bg-muted/50 border-primary/20'
+                }`}>
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    {fileError ? (
+                      <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+                    ) : (
+                      <FileText className="h-5 w-5 text-primary flex-shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium truncate block">{file.name}</span>
+                      <span className="text-xs text-muted-foreground block">
+                        {(file.size / (1024 * 1024)).toFixed(2)} MB
+                      </span>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={removeFile} className="hover:text-destructive flex-shrink-0 ml-2">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* ✅ Graceful Inline Error Display */}
+                {fileError && (
+                  <div className="bg-destructive/10 text-destructive p-4 rounded-md text-sm border border-destructive/20 flex flex-col gap-2">
+                    <div className="flex items-start gap-2 font-semibold">
+                      <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <p>File Processing Failed</p>
+                    </div>
+                    <p className="opacity-90 ml-6">{fileError}</p>
+                    <p className="ml-6 mt-1 text-xs opacity-80 font-medium">Please remove this file and paste your notes into the text box below instead.</p>
+                  </div>
+                )}
+
+                {/* Focus Topic Input - Hides if there's an error */}
+                {!fileError && (
+                  <div className={`p-4 rounded-md border transition-colors ${
+                    requiresFocusTopic && !focusTopic 
+                      ? 'bg-destructive/5 border-destructive/30' 
+                      : 'bg-primary/5 border-primary/10'
+                  }`}>
+                    <Label className="text-sm flex items-center gap-2 mb-2">
+                      <Target className={`h-4 w-4 ${requiresFocusTopic && !focusTopic ? 'text-destructive' : 'text-primary'}`} />
+                      Narrow down the topic {requiresFocusTopic && <span className="text-destructive font-bold">(Required for large files)</span>}
+                    </Label>
+                    <Input 
+                      placeholder="E.g., 'Focus only on the heart valves' or 'Skip the history section'"
+                      value={focusTopic}
+                      onChange={(e) => setFocusTopic(e.target.value)}
+                      className={`bg-background ${requiresFocusTopic && !focusTopic ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                    />
+                    {requiresFocusTopic && !focusTopic && (
+                      <p className="text-xs text-destructive mt-2 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        This file is very large. You must specify a focus topic to prevent the AI from generating random questions.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors bg-muted/30"
               >
                 <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                 <p className="text-sm font-medium mb-1">Click to upload or drag and drop</p>
-                <p className="text-xs text-muted-foreground">PDF, DOCX, TXT (Max 10MB)</p>
+                <p className="text-xs text-muted-foreground">PDF, PPTX, DOCX, TXT (Max 150MB)</p>
               </div>
             )}
           </div>
 
-          {/* OR Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
@@ -156,14 +226,14 @@ const Quiz = () => {
             </div>
           </div>
 
-          {/* Topic Description */}
+          {/* Notes Input */}
           <div className="border rounded-lg p-6 bg-card">
-            <h2 className="text-sm font-medium mb-3">Describe Your Topic</h2>
+            <h2 className="text-sm font-medium mb-3">Paste Notes OR Describe Topic</h2>
             <Textarea
-              placeholder="E.g., 'Create a quiz about the muscular system, focus on major groups and their function'"
+              placeholder="Paste your extensive notes here (no length limit) or describe a specific anatomy topic..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="min-h-[100px]"
+              className="min-h-[150px] resize-y"
             />
           </div>
 
@@ -178,8 +248,14 @@ const Quiz = () => {
                   max="50"
                   value={numQuestions}
                   onChange={(e) => setNumQuestions(e.target.value)}
-                  className="mt-1"
+                  className={`mt-1 ${isNumInvalid ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 />
+                {/* ✅ Inline error message */}
+                {isNumInvalid && (
+                  <p className="text-xs text-destructive mt-1 font-medium">
+                    Please enter a number between 1 and 50.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -215,14 +291,21 @@ const Quiz = () => {
           {/* Generate Button */}
           <Button 
             onClick={handleGenerate}
-            disabled={loading || (!description && !file)}
-            className="w-full h-12 text-base"
+            disabled={isGenerateDisabled}
+            className="w-full h-12 text-base gradient-primary relative overflow-hidden"
           >
             {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generating...
-              </>
+              <div className="flex flex-col items-center justify-center">
+                <div className="flex items-center">
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <span>Processing...</span>
+                </div>
+                {file && file.size > 10 * 1024 * 1024 && (
+                  <span className="text-xs font-normal opacity-80 mt-0.5">
+                    Large files (like {file.name}) can take 1-2 minutes to analyze. Please don't close this page.
+                  </span>
+                )}
+              </div>
             ) : (
               <>
                 <Sparkles className="h-4 w-4 mr-2" />
