@@ -9,7 +9,6 @@ import {
   Brain, 
   FileText, 
   Clock, 
-  Share2, 
   Trash2, 
   RotateCcw,
   Sparkles,
@@ -49,23 +48,18 @@ export const Dashboard = () => {
   const loadUserData = async () => {
     setLoading(true);
     try {
-      // Load user's quizzes
       const quizzesRes = await api.getMyQuizzes();
       setQuizzes(quizzesRes.quizzes);
       
-      // Load user's flashcards
       const flashcardsRes = await api.getMyFlashcards();
       setFlashcards(flashcardsRes.sets);
       
-      // Calculate stats
       const totalQuizzes = quizzesRes.quizzes.length;
       const totalFlashcards = flashcardsRes.sets.length;
       
-      // Get all attempts for quizzes (you'll need to add this endpoint)
-      const totalScore = 0;  // These are just placeholders for now
+      const totalScore = 0;  // Placeholders
       const attemptCount = 0;
       
-      // For now, use placeholder stats
       setStats({
         totalQuizzes,
         totalFlashcards,
@@ -84,43 +78,29 @@ export const Dashboard = () => {
     }
   };
 
-const handleDeleteQuiz = async (quizId: string) => {
-  if (!confirm("Are you sure you want to delete this quiz? It will be removed from your dashboard and the community.")) return;
-  
-  try {
-    await api.deleteQuiz(quizId); // calls backend
-    setQuizzes(quizzes.filter(q => q.id !== quizId));
-    toast({
-      title: "Deleted",
-      description: "Quiz deleted successfully",
-    });
-  } catch (error) {
-    toast({
-      title: "Error",
-      description: "Failed to delete quiz",
-      variant: "destructive",
-    });
-  }
-};
+  const handleDeleteQuiz = async (quizId: string) => {
+    if (!confirm("Are you sure you want to delete this quiz? It will be removed from your dashboard and the community.")) return;
+    
+    try {
+      await api.deleteQuiz(quizId);
+      setQuizzes(quizzes.filter(q => q.id !== quizId));
+      toast({ title: "Deleted", description: "Quiz deleted successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete quiz", variant: "destructive" });
+    }
+  };
 
-const handleDeleteFlashcard = async (setId: string) => {
-  if (!confirm("Are you sure you want to delete this flashcard set? It will be removed from your dashboard and the community.")) return;
-  
-  try {
-    await api.deleteFlashcardSet(setId);
-    setFlashcards(flashcards.filter(f => f.id !== setId));
-    toast({
-      title: "Deleted",
-      description: "Flashcard set deleted successfully",
-    });
-  } catch (error) {
-    toast({
-      title: "Error",
-      description: "Failed to delete flashcard set",
-      variant: "destructive",
-    });
-  }
-};
+  const handleDeleteFlashcard = async (setId: string) => {
+    if (!confirm("Are you sure you want to delete this flashcard set? It will be removed from your dashboard and the community.")) return;
+    
+    try {
+      await api.deleteFlashcardSet(setId);
+      setFlashcards(flashcards.filter(f => f.id !== setId));
+      toast({ title: "Deleted", description: "Flashcard set deleted successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete flashcard set", variant: "destructive" });
+    }
+  };
 
   if (loading) {
     return (
@@ -141,7 +121,7 @@ const handleDeleteFlashcard = async (setId: string) => {
       <div className="container mx-auto px-4 pt-24">
         {/* Welcome Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">
             Welcome back, {user?.name || user?.email}!
           </h1>
           <p className="text-muted-foreground">
@@ -150,51 +130,51 @@ const handleDeleteFlashcard = async (setId: string) => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
+          <Card className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Brain className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.totalQuizzes}</p>
-                <p className="text-sm text-muted-foreground">Quizzes</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.totalQuizzes}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Quizzes</p>
               </div>
             </div>
           </Card>
           
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
+          <Card className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <BookOpen className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.totalFlashcards}</p>
-                <p className="text-sm text-muted-foreground">Flashcards</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.totalFlashcards}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Flashcards</p>
               </div>
             </div>
           </Card>
           
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
+          <Card className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Clock className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.totalAttempts}</p>
-                <p className="text-sm text-muted-foreground">Attempts</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.totalAttempts}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Attempts</p>
               </div>
             </div>
           </Card>
           
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
+          <Card className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <BarChart className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.averageScore}%</p>
-                <p className="text-sm text-muted-foreground">Avg. Score</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.averageScore}%</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Avg. Score</p>
               </div>
             </div>
           </Card>
@@ -202,53 +182,46 @@ const handleDeleteFlashcard = async (setId: string) => {
 
         {/* Content Tabs */}
         <Tabs defaultValue="quizzes" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="quizzes">My Quizzes</TabsTrigger>
-            <TabsTrigger value="flashcards">My Flashcards</TabsTrigger>
-            <TabsTrigger value="recent">Recent Activity</TabsTrigger>
+          {/* ✅ FIXED: Mobile optimized TabsList (wrapping allowed) */}
+          <TabsList className="w-full h-auto flex-wrap justify-start p-1 gap-1">
+            <TabsTrigger value="quizzes" className="flex-1 sm:flex-none">My Quizzes</TabsTrigger>
+            <TabsTrigger value="flashcards" className="flex-1 sm:flex-none">My Flashcards</TabsTrigger>
+            <TabsTrigger value="recent" className="flex-1 sm:flex-none">Recent Activity</TabsTrigger>
           </TabsList>
 
           <TabsContent value="quizzes" className="space-y-4">
             {quizzes.length === 0 ? (
-              <Card className="p-12 text-center">
+              <Card className="p-8 sm:p-12 text-center">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="text-lg font-semibold mb-2">No quizzes yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Create your first quiz to start learning
-                </p>
+                <p className="text-muted-foreground mb-4">Create your first quiz to start learning</p>
                 <Button onClick={() => navigate("/quiz")}>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Create Quiz
+                  <Sparkles className="h-4 w-4 mr-2" /> Create Quiz
                 </Button>
               </Card>
             ) : (
-              <div className="grid gap-4">
+              <div className="grid gap-3 sm:gap-4">
                 {quizzes.map((quiz) => (
                   <Card key={quiz.id} className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold mb-1">{quiz.title}</h3>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>{quiz.questions.length} questions</span>
-                          <span>•</span>
-                          <span>{quiz.difficulty}</span>
-                          <span>•</span>
+                    {/* ✅ FIXED: Responsive flex-col to flex-row */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0"> {/* min-w-0 required for truncate */}
+                        <h3 className="font-semibold mb-1 truncate text-base sm:text-lg">{quiz.title}</h3>
+                        {/* ✅ FIXED: Flex-wrap for metadata */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-muted-foreground">
+                          <span>{quiz.questions.length} Qs</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="capitalize">{quiz.difficulty}</span>
+                          <span className="hidden sm:inline">•</span>
                           <span>{new Date(quiz.createdAt).toLocaleDateString()}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => navigate(`/quiz/${quiz.id}`)}
-                        >
-                          <RotateCcw className="h-4 w-4" />
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        <Button size="sm" variant="outline" onClick={() => navigate(`/quiz/${quiz.id}`)}>
+                          <RotateCcw className="h-4 w-4 mr-1 sm:mr-0" />
+                          <span className="sm:hidden text-xs">Retake</span>
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDeleteQuiz(quiz.id)}
-                        >
+                        <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteQuiz(quiz.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -261,91 +234,69 @@ const handleDeleteFlashcard = async (setId: string) => {
 
           <TabsContent value="flashcards" className="space-y-4">
             {flashcards.length === 0 ? (
-              <Card className="p-12 text-center">
+              <Card className="p-8 sm:p-12 text-center">
                 <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="text-lg font-semibold mb-2">No flashcards yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Create your first flashcard set
-                </p>
+                <p className="text-muted-foreground mb-4">Create your first flashcard set</p>
                 <Button onClick={() => navigate("/flashcards")}>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Create Flashcards
+                  <Sparkles className="h-4 w-4 mr-2" /> Create Flashcards
                 </Button>
               </Card>
             ) : (
-              <div className="grid gap-4">
-{flashcards.map((set) => {
-  console.log('Flashcard set:', set); // Add this to see the full object
-  console.log('Flashcard ID:', set.id); // Check if ID exists
-  
-  return (
-    <Card key={set.id || Math.random()} className="p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <h3 className="font-semibold mb-1">{set.title}</h3>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>{set.flashcards?.length || 0} cards</span>
-            <span>•</span>
-            <span>{new Date(set.createdAt).toLocaleDateString()}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              console.log('Navigating to:', set.id); // Add this
-              navigate(`/flashcards/${set.id}`);
-            }}
-          >
-            <BookOpen className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleDeleteFlashcard(set.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </Card>
-  );
-})}
+              <div className="grid gap-3 sm:gap-4">
+                {flashcards.map((set) => (
+                  <Card key={set.id || Math.random()} className="p-4">
+                    {/* ✅ FIXED: Responsive flex layout */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold mb-1 truncate text-base sm:text-lg">{set.title}</h3>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-muted-foreground">
+                          <span>{set.flashcards?.length || 0} cards</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span>{new Date(set.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        <Button size="sm" variant="outline" onClick={() => navigate(`/flashcards/${set.id}`)}>
+                          <BookOpen className="h-4 w-4 mr-1 sm:mr-0" />
+                          <span className="sm:hidden text-xs">Study</span>
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteFlashcard(set.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="recent" className="space-y-4">
           {attempts.length === 0 ? (
-            <Card className="p-12 text-center">
+            <Card className="p-8 sm:p-12 text-center">
               <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-semibold mb-2">No Recent Activity</h3>
-              <p className="text-muted-foreground">
-                Take some quizzes to see your progress here
-              </p>
+              <p className="text-muted-foreground">Take some quizzes to see your progress here</p>
             </Card>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-3 sm:gap-4">
               {attempts.map((attempt) => {
                 const quiz = quizzes.find(q => q.id === attempt.quizId);
                 return (
                   <Card key={attempt.id} className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold mb-1">{quiz?.title || 'Quiz'}</h3>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span className="text-green-600">Score: {attempt.percentage}%</span>
-                          <span>•</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold mb-1 truncate text-base sm:text-lg">{quiz?.title || 'Quiz'}</h3>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-muted-foreground">
+                          <span className="text-green-600 font-medium">Score: {attempt.percentage}%</span>
+                          <span className="hidden sm:inline">•</span>
                           <span>{new Date(attempt.completedAt).toLocaleDateString()}</span>
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => navigate(`/quiz/${attempt.quizId}`)}
-                      >
-                        <RotateCcw className="h-4 w-4" />
+                      <Button size="sm" variant="outline" className="self-end sm:self-auto" onClick={() => navigate(`/quiz/${attempt.quizId}`)}>
+                        <RotateCcw className="h-4 w-4 mr-1 sm:mr-0" />
+                        <span className="sm:hidden text-xs">Retake</span>
                       </Button>
                     </div>
                   </Card>
