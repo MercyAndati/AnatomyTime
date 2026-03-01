@@ -16,6 +16,7 @@ import flashcardRoutes from './routes/flashcard.routes';
 import communityRoutes from './routes/community.routes';
 import adminRoutes from './routes/admin.routes';
 import noteRoutes from './routes/note.routes';
+import feedbackRoutes from './routes/feedback.routes'; // ✅ NEW: Imported Feedback
 
 // Services
 import { AIService } from './services/ai.service';
@@ -68,8 +69,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Initialize services and attach to app
-// ADC will automatically use GOOGLE_APPLICATION_CREDENTIALS
-app.locals.aiService = new AIService(); // No API key needed!
+app.locals.aiService = new AIService(); 
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -79,6 +79,7 @@ app.use('/api/flashcards', flashcardRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notes', noteRoutes);
+app.use('/api/feedback', feedbackRoutes); // ✅ NEW: Mounted Feedback Route
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

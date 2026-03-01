@@ -12,9 +12,21 @@ import {
   Note
 } from '@/types';
 
+// ✅ NEW: Feedback Type
+export interface Feedback {
+  _id: string;
+  userId: string; // ✅ ADDED: Need this to check ownership
+  title: string;
+  message: string;
+  authorName: string;
+  isPublic: boolean;
+  createdAt: string;
+}
+
 class ApiClient {
   private baseUrl: string;
   private defaultTimeout = 10000;
+  
   getNoteFileUrl(fileName: string): string {
     return `${this.baseUrl}/notes/file/${fileName}`;
   }
@@ -29,7 +41,6 @@ class ApiClient {
   ): Promise<T> {
     const token = localStorage.getItem('token');
     const controller = new AbortController();
-    // ✅ INCREASE TIMEOUT HERE TOO: Changed to 300,000 (5 minutes) for AI Grading
     const timeoutId = setTimeout(() => controller.abort(), 300000);
 
     try {
@@ -67,8 +78,6 @@ class ApiClient {
   private async requestForm<T>(endpoint: string, formData: FormData): Promise<T> {
     const token = localStorage.getItem('token');
     const controller = new AbortController();
-    
-    // ✅ INCREASED TIMEOUT: Changed to 5 minutes (300,000 ms) for large AI processing
     const timeoutId = setTimeout(() => controller.abort(), 300000);
 
     try {
@@ -193,7 +202,6 @@ class ApiClient {
       '/flashcards/my-sets/list'
     );
 
-    // Transform _id to id if needed
     const transformedSets: FlashcardSet[] = response.sets.map((set) => ({
       ...set,
       id: set.id || (set as { _id?: string })._id || set.id,
@@ -218,12 +226,10 @@ class ApiClient {
     });
   }
 
-  // For recent activity - get user's attempts
   async getMyAttempts(): Promise<{ attempts: QuizAttempt[] }> {
-    return this.request<{ attempts: QuizAttempt[] }>('/quiz/attempts/my-all'); // We'll need to add this endpoint
+    return this.request<{ attempts: QuizAttempt[] }>('/quiz/attempts/my-all'); 
   }
 
-  // Validation endpoint
   async validateFile(formData: FormData): Promise<{
     valid: boolean;
     message: string;
@@ -252,7 +258,6 @@ class ApiClient {
     });
   }
 
-
   async deletePost(postId: string): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/community/${postId}`, {
       method: 'DELETE',
@@ -260,13 +265,11 @@ class ApiClient {
   }
 
   async likePost(postId: string, type: string, resourceId?: string): Promise<{ likes: number }> {
-    // First try to like via community endpoint (syncs with resource)
     try {
       return await this.request<{ likes: number }>(`/community/${postId}/like`, {
         method: 'POST',
       });
     } catch (error) {
-      // Fallback to direct resource like if community endpoint fails
       const targetId = resourceId || postId;
       let endpoint: string;
 
@@ -288,25 +291,24 @@ class ApiClient {
   
   // Note endpoints
   async createNote(data: { title: string; content?: string; tags?: string }, file?: File): Promise<{ message: string; note: Note }> {
-  if (file) {
-    const formData = new FormData();
-    formData.append('title', data.title);
-    if (data.content) formData.append('content', data.content); // Only if exists
-    if (data.tags) formData.append('tags', data.tags);
-    formData.append('file', file);
-    
-    return this.requestForm<{ message: string; note: Note }>('/notes/create', formData);
-  } else {
-    // For text-only notes, content is required
-    if (!data.content) {
-      throw new Error('Content is required when not uploading a file');
+    if (file) {
+      const formData = new FormData();
+      formData.append('title', data.title);
+      if (data.content) formData.append('content', data.content); 
+      if (data.tags) formData.append('tags', data.tags);
+      formData.append('file', file);
+      
+      return this.requestForm<{ message: string; note: Note }>('/notes/create', formData);
+    } else {
+      if (!data.content) {
+        throw new Error('Content is required when not uploading a file');
+      }
+      return this.request<{ message: string; note: Note }>('/notes/create', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
     }
-    return this.request<{ message: string; note: Note }>('/notes/create', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
   }
-}
 
   async getMyNotes(): Promise<{ notes: Note[] }> {
     return this.request<{ notes: Note[] }>('/notes/my-notes');
@@ -333,7 +335,24 @@ class ApiClient {
       method: 'POST',
     });
   }
-}
 
+  // ✅ NEW: Feedback endpoints
+  async submitFeedback(data: { title: string; message: string; isPublic: boolean }): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/feedback', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getFeedbacks(): Promise<{ feedbacks: Feedback[] }> {
+    return this.request<{ feedbacks: Feedback[] }>('/feedback');
+  }
+
+  async deleteFeedback(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/feedback/${id}`, {
+      method: 'DELETE',
+    });
+  }
+}
 
 export const api = new ApiClient();
