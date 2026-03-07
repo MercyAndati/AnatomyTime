@@ -11,13 +11,13 @@ const Index = () => {
       <Navigation />
       
       {/* 🚀 HERO SECTION */}
-      <section className="pt-32 pb-20 px-4 overflow-hidden relative">
+      <section className="pt-32 pb-10 px-4 overflow-hidden relative">
         {/* Cellular Hexagon pattern for biological/medical feel */}
-<div className="absolute inset-0 bg-grid-hexagon [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+        <div className="absolute inset-0 bg-grid-hexagon [mask-image:radial-gradient(ellipse_100%_80%_at_50%_0%,#000_70%,transparent_100%)]"></div>
 
         <div className="container mx-auto max-w-6xl text-center relative z-10 animate-fade-in">
           <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight text-foreground">
-            Master Human Anatomy. <br className="hidden md:block" />
+            Master Human Anatomy, <br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">
               With constant practice.
             </span>
@@ -36,45 +36,6 @@ const Index = () => {
               Start Learning for Free
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-          </div>
-
-          {/* 💻 PURE CSS APP MOCKUP (Shows the product instantly) */}
-          <div className="mx-auto max-w-4xl relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-blue-400/30 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition duration-500"></div>
-            <div className="relative rounded-xl border border-border bg-card/80 backdrop-blur-sm shadow-2xl overflow-hidden text-left">
-              {/* Mockup Header */}
-              <div className="h-12 border-b border-border bg-muted/30 flex items-center px-4 gap-2">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-400/80"></div>
-                  <div className="w-3 h-3 rounded-full bg-amber-400/80"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-400/80"></div>
-                </div>
-                <div className="mx-auto bg-background border border-border rounded-md px-3 py-1 text-xs text-muted-foreground font-medium flex items-center gap-2">
-                  <Clock className="h-3 w-3" /> Rapid Fire Quiz Active
-                </div>
-              </div>
-              {/* Mockup Body */}
-              <div className="p-6 md:p-8 space-y-6">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Question 4 of 50</span>
-                  <span className="text-sm font-bold text-destructive flex items-center gap-1.5 animate-pulse"><Clock className="h-4 w-4"/> 00:42</span>
-                </div>
-                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-primary w-[8%] rounded-full"></div>
-                </div>
-                <h3 className="text-xl md:text-2xl font-semibold text-foreground leading-snug">
-                  Which of the following structures passes through the foramen magnum?
-                </h3>
-                <div className="space-y-3">
-                  {["Internal carotid artery", "Vertebral arteries", "Optic nerve", "Olfactory nerve"].map((ans, i) => (
-                    <div key={i} className={`p-4 rounded-lg border ${i === 1 ? 'border-primary bg-primary/5' : 'border-border bg-background'} flex items-center gap-3`}>
-                      <div className={`h-4 w-4 rounded-full border ${i === 1 ? 'border-primary border-[5px]' : 'border-muted-foreground'}`}></div>
-                      <span className={`text-base ${i === 1 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>{ans}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -187,7 +148,6 @@ const Index = () => {
                 Create Free Account
               </Button>
             </div>
-            <p className="mt-6 text-sm text-muted-foreground">No credit card required. Start studying in 30 seconds.</p>
           </div>
         </div>
       </section>

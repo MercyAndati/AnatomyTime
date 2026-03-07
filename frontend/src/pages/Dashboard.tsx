@@ -186,7 +186,6 @@ export const Dashboard = () => {
           <TabsList className="w-full h-auto flex-wrap justify-start p-1 gap-1">
             <TabsTrigger value="quizzes" className="flex-1 sm:flex-none">My Quizzes</TabsTrigger>
             <TabsTrigger value="flashcards" className="flex-1 sm:flex-none">My Flashcards</TabsTrigger>
-            <TabsTrigger value="recent" className="flex-1 sm:flex-none">Recent Activity</TabsTrigger>
           </TabsList>
 
           <TabsContent value="quizzes" className="space-y-4">
@@ -271,40 +270,6 @@ export const Dashboard = () => {
               </div>
             )}
           </TabsContent>
-
-          <TabsContent value="recent" className="space-y-4">
-          {attempts.length === 0 ? (
-            <Card className="p-8 sm:p-12 text-center">
-              <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No Recent Activity</h3>
-              <p className="text-muted-foreground">Take some quizzes to see your progress here</p>
-            </Card>
-          ) : (
-            <div className="grid gap-3 sm:gap-4">
-              {attempts.map((attempt) => {
-                const quiz = quizzes.find(q => q.id === attempt.quizId);
-                return (
-                  <Card key={attempt.id} className="p-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold mb-1 truncate text-base sm:text-lg">{quiz?.title || 'Quiz'}</h3>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-muted-foreground">
-                          <span className="text-green-600 font-medium">Score: {attempt.percentage}%</span>
-                          <span className="hidden sm:inline">•</span>
-                          <span>{new Date(attempt.completedAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" className="self-end sm:self-auto" onClick={() => navigate(`/quiz/${attempt.quizId}`)}>
-                        <RotateCcw className="h-4 w-4 mr-1 sm:mr-0" />
-                        <span className="sm:hidden text-xs">Retake</span>
-                      </Button>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
         </Tabs>
       </div>
     </div>

@@ -69,20 +69,7 @@ export const FlashcardSession = ({
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
             <h1 className="text-xl sm:text-2xl font-bold truncate pr-2">{title}</h1>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleShuffle} className="flex-1 sm:flex-none">
-                <Shuffle className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Shuffle</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={onShare} className="flex-1 sm:flex-none">
-                <Share2 className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Share</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={onSave} className="flex-1 sm:flex-none">
-                <Bookmark className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Save</span>
-              </Button>
-            </div>
+            
           </div>
           
           <Progress value={progress} className="h-2" />
@@ -171,6 +158,21 @@ export const FlashcardSession = ({
         <p className="text-center text-xs text-muted-foreground mt-8 hidden sm:block">
           Click card to flip • Use arrow keys to navigate
         </p>
+
+        <div className="flex flex-wrap items-center justify-center gap-2 p-5">
+              <Button variant="outline" size="sm" onClick={handleShuffle} className="flex-1 sm:flex-none">
+                <Shuffle className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Shuffle</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={onShare} className="flex-1 sm:flex-none">
+                <Share2 className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Share</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={onSave} className="flex-1 sm:flex-none">
+                <Bookmark className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Save</span>
+              </Button>
+            </div>
       </div>
 
       <style>{`

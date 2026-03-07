@@ -217,10 +217,10 @@ export function Navigation() {
                 <NavLink
                   key={link.to}
                   to={link.to}
-                  className="flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-primary transition-colors group relative"
+                  className="flex items-center gap-2 text-md font-medium text-foreground hover:text-primary transition-colors group relative"
                   activeClassName="text-primary"
                 >
-                  <Icon className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                  <Icon className="h-4 w-5 group-hover:scale-110 transition-transform" />
                   <span className="relative">
                     {link.label}
                     <span className="absolute -bottom-1 left-0 w-0 group-hover:w-full h-0.5 bg-primary transition-all duration-300"></span>

@@ -31,7 +31,7 @@
     --secondary-foreground: 240 5.9% 10%;
 
     --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted-foreground: 240 3.8% 5%;
 
     --accent: 217 91% 60%;
     --accent-foreground: 0 0% 100%;
@@ -44,7 +44,7 @@
 
     /* Sharp, neutral borders */
     --border: 240 5.9% 80%;
-    --input: 240 5.9% 90%;
+    --input: 240 5.9% 70%;
     --ring: 217 91% 60%;
 
     /* TIGHTER CORNERS for professional feel (was 1rem) */
@@ -52,7 +52,7 @@
     
     /* Redefined Glass/Surface variables (Less glow, more structure) */
     --glass-bg: 0 0% 100% / 0.9;
-    --glass-border: 240 5.9% 90%;
+    --glass-border: 240 5.9% 65%;
     --glass-shadow: 240 5.9% 10% / 0.05;
     
     --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 50%));
@@ -61,11 +61,11 @@
 
   .dark {
     /* Deep charcoal/black for dark mode (Google AI Studio style) */
-    --background: 0 0% 4%; 
-    --foreground: 0 0% 98%;
+    --background: 0 0% 0%; 
+    --foreground: 0 0% 99%;
 
     /* Slightly lighter grey for floating cards (Render style) */
-    --card: 0 0% 9%; 
+    --card: 0 0% 5%; 
     --card-foreground: 0 0% 98%;
 
     --popover: 0 0% 9%;
@@ -93,13 +93,13 @@
     --destructive-foreground: 0 0% 98%;
 
     /* Subtle, dark neutral borders */
-    --border: 0 0% 15%; 
+    --border: 0 0% 40%; 
     --input: 0 0% 15%;
     --ring: 217 91% 60%;
     
     /* Redefined Glass/Surface variables for Dark Mode */
     --glass-bg: 0 0% 9% / 0.8;
-    --glass-border: 0 0% 15%;
+    --glass-border: 0 0% 40%;
     --glass-shadow: 0 0% 0% / 0.5;
     
     --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 50%));
