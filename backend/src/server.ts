@@ -24,6 +24,9 @@ import { AIService } from './services/ai.service';
 dotenv.config();
 
 const app = express();
+// ✅ NEW: Tell Express to trust Render's reverse proxy for rate-limiting
+app.set('trust proxy', 1);
+
 app.use((req, res, next) => {
   res.removeHeader("X-Frame-Options");
 
