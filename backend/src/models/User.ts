@@ -40,7 +40,7 @@ const userSchema = new Schema<IUser>({
   timestamps: true
 });
 
-// Hash password before saving - simplified without next()
+// Hash password
 userSchema.pre('save', async function() {
   const user = this as IUser;
   
@@ -54,7 +54,7 @@ userSchema.pre('save', async function() {
   }
 });
 
-// Compare password method
+// Compare password
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };

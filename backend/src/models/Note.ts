@@ -1,4 +1,3 @@
-// backend/src/models/Note.ts
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface INote extends Document {
