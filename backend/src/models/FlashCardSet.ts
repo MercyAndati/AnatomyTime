@@ -1,4 +1,3 @@
-// backend/src/models/FlashCardSet.ts
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IFlashcard {
@@ -17,8 +16,6 @@ export interface IFlashcardSet extends Document {
   flashcards: IFlashcard[];
   createdBy: mongoose.Types.ObjectId;
   sourcePrompt?: string;
-  sourceFileUrl?: string;
-  sourceFileMetadata?: any;
   isPublic: boolean;
   tags: string[];
   likes: number;
@@ -43,8 +40,6 @@ const flashcardSetSchema = new Schema<IFlashcardSet>({
   flashcards: [flashcardSchema],
   createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   sourcePrompt: String,
-  sourceFileUrl: String,
-  sourceFileMetadata: Schema.Types.Mixed,
   isPublic: { type: Boolean, default: false },
   tags: [String],
   likes: { type: Number, default: 0 },

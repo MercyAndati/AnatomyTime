@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import FlashcardSet from '../models/FlashCardSet';
 import { AIService } from '../services/ai.service';
+import CommunityPost from '../models/CommunityPost';
 
 const router = express.Router();
 
@@ -76,9 +77,6 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
       return res.status(400).json({ message: 'Please provide a prompt, topic, or upload study materials' });
     }
 
-    // ==========================================
-    // THE "GREEDY STUDENT" CHECK
-    // ==========================================
     const requestedCards = parseInt(numCards);
     if (isNaN(requestedCards) || requestedCards < 1 || requestedCards > 50) {
       return res.status(400).json({ 
@@ -87,12 +85,9 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
       });
     }
 
-    // ==========================================
-    // PHASE 1: IF TEXT ONLY (No File)
-    // ==========================================
     if (!req.file) {
       const contentToValidate = prompt || topic || '';
-      console.log("🕵️ Running AI Bouncer on text input...");
+      console.log("Running AI validation check on text input...");
       const validation = await aiService.validateTextContent(contentToValidate);
       
       if (!validation.isAnatomy) {
@@ -103,9 +98,6 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
       }
     }
 
-    // ==========================================
-    // PHASE 2: IF FILE UPLOADED (The Cloud Pipeline)
-    // ==========================================
     if (req.file) {
       geminiFile = await aiService.uploadFileToGemini(
         req.file.path, 
@@ -115,7 +107,7 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
 
       if (!geminiFile) throw new Error("Failed to upload file to AI servers.");
 
-      console.log("🕵️ Running AI Bouncer validation...");
+      console.log("Running AI file validation...");
       const validation = await aiService.validateFileContent(geminiFile.uri, geminiFile.mimeType);
       
       if (!validation.isAnatomy) {
@@ -126,41 +118,38 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
       }
     }
 
-    // ==========================================
-    // PHASE 3: GENERATION
-    // ==========================================
     const focusInstruction = focusTopic 
       ? `\nCRITICAL INSTRUCTION: The user specifically requested to focus ONLY on: "${focusTopic}". Ignore irrelevant sections.` 
       : '';
 
     const aiPrompt = `
-You are an expert anatomy educator. Create a ${difficulty} difficulty set of flashcards.
-${req.file ? `Base the flashcards ONLY on the provided document.` : `Base the flashcards on this topic: ${prompt || topic}`}
-${focusInstruction}
+      You are an expert anatomy educator. Create a ${difficulty} difficulty set of flashcards.
+      ${req.file ? `Base the flashcards ONLY on the provided document.` : `Base the flashcards on this topic: ${prompt || topic}`}
+      ${focusInstruction}
 
-REQUIREMENTS:
-1. Create exactly ${requestedCards} flashcards.
-2. The "front" should ask a clear, specific question or state a term.
-3. The "back" should provide the medically accurate answer, definition, or explanation.
-4. Keep the "back" concise enough to be easily readable on a digital card (1-3 sentences).
-5. CRITICAL STRICT RULE: You must complete the entire JSON object. Pace your output length to guarantee the final closing brackets ']}' are printed.
+      REQUIREMENTS:
+      1. Create exactly ${requestedCards} flashcards.
+      2. The "front" should ask a clear, specific question or state a term.
+      3. The "back" should provide the medically accurate answer, definition, or explanation.
+      4. Keep the "back" concise enough to be easily readable on a digital card (1-3 sentences).
+      5. CRITICAL STRICT RULE: You must complete the entire JSON object. Pace your output length to guarantee the final closing brackets ']}' are printed.
 
-OUTPUT FORMAT (STRICT JSON):
-{
-  "flashcards": [
-    {
-      "id": "c1",
-      "front": "Question or Term here",
-      "back": "Answer or Definition here"
-    }
-  ],
-  "title": "Generate a short, specific 3-to-5 word title based on the core topic",
-  "topic": "Generate a 1-to-2 word category (e.g., Neurology, Osteology)",
-  "description": "A 1-sentence summary of what these flashcards cover."
-}
+      OUTPUT FORMAT (STRICT JSON):
+      {
+        "flashcards": [
+          {
+            "id": "c1",
+            "front": "Question or Term here",
+            "back": "Answer or Definition here"
+          }
+        ],
+        "title": "Generate a short, specific 3-to-5 word title based on the core topic",
+        "topic": "Generate a 1-to-2 word category (e.g., Neurology, Osteology)",
+        "description": "A 1-sentence summary of what these flashcards cover."
+      }
 
-Return ONLY valid JSON. No markdown formatting.
-`;
+      Return ONLY valid JSON. No markdown formatting.
+      `;
 
     const aiResponse = await aiService.generateContent(
       aiPrompt, 
@@ -169,9 +158,6 @@ Return ONLY valid JSON. No markdown formatting.
       geminiFile?.mimeType
     );
 
-    // ==========================================
-    // PHASE 4: PARSE AND SANITIZE JSON
-    // ==========================================
     let flashcardData;
     try {
       let cleanText = aiResponse.text.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
@@ -185,7 +171,6 @@ Return ONLY valid JSON. No markdown formatting.
       const jsonString = cleanText.substring(startIndex, endIndex + 1);
       flashcardData = JSON.parse(jsonString);
       
-      // SAFETY NET
       flashcardData.flashcards = flashcardData.flashcards.map((card: any, index: number) => ({
         id: card.id || `c${index + 1}`,
         front: card.front || 'Front content missing',
@@ -193,7 +178,7 @@ Return ONLY valid JSON. No markdown formatting.
       }));
 
     } catch (parseError) {
-      console.error("\n❌ ================= JSON PARSE FAILED =================");
+      console.error("\nJSON PARSE FAILED");
       console.error("RAW AI OUTPUT:\n", aiResponse.text);
       throw new Error('AI response was invalid. Please try again.');
     }
@@ -203,10 +188,9 @@ Return ONLY valid JSON. No markdown formatting.
       title: flashcardData.title || 'Anatomy Flashcards',
       topic: flashcardData.topic || topic || 'General Anatomy',
       description: flashcardData.description || `Generated from ${req.file ? 'uploaded materials' : 'prompt'}`,
-      flashcards: flashcardData.flashcards, // ✅ Changed 'cards' to 'flashcards'
+      flashcards: flashcardData.flashcards,
       createdBy: req.userId,
       isPublic: false,
-      // ✅ Removed 'difficulty' to match your DB schema
     });
 
     await flashcardSet.save();
@@ -216,7 +200,7 @@ Return ONLY valid JSON. No markdown formatting.
       flashcardSet: {
         id: flashcardSet._id,
         title: flashcardSet.title,
-        flashcards: flashcardSet.flashcards // ✅ Changed from 'cards: flashcardSet.cards'
+        flashcards: flashcardSet.flashcards
       }
     });
 
@@ -250,8 +234,9 @@ router.get('/my-sets/list', verifyToken, async (req: any, res) => {
       title: set.title,
       topic: set.topic,
       description: set.description,
-      cardCount: set.flashcards.length, // ✅ Changed from set.cards.length
-      isPublic: set.isPublic,           // ✅ Removed difficulty mapping here too
+      flashcards: set.flashcards,
+      cardCount: set.flashcards.length, 
+      isPublic: set.isPublic, 
       createdAt: set.createdAt
     }));
 
@@ -309,6 +294,69 @@ router.delete('/:id', verifyToken, async (req: any, res) => {
     await FlashcardSet.deleteOne({ _id: set._id });
     res.json({ message: 'Flashcard set deleted successfully' });
   } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Share flashcard set to community
+router.post('/:id/share', verifyToken, async (req: any, res) => {
+  try {
+    const set = await FlashcardSet.findById(req.params.id);
+    if (!set) {
+      return res.status(404).json({ message: 'Flashcard set not found' });
+    }
+
+    if (set.createdBy.toString() !== req.userId) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    // Check if it's already shared
+    const existingPost = await CommunityPost.findOne({ resourceId: set._id });
+    if (existingPost) {
+      return res.status(200).json({ 
+        message: 'Already shared to community',
+        alreadyShared: true,
+        post: existingPost
+      });
+    }
+
+    const post = new CommunityPost({
+      title: `Flashcards: ${set.title}`,
+      type: 'flashcard_share',
+      sharedBy: req.userId,
+      flashcardSetId: set._id 
+    });
+
+    await post.save();
+
+    set.isPublic = true;
+    await set.save();
+
+    res.status(201).json({ 
+      message: 'Shared to community successfully',
+      post 
+    });
+
+  } catch (error) {
+    console.error('Share error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Like a flashcard set
+router.post('/:id/like', verifyToken, async (req: any, res) => {
+  try {
+    const set = await FlashcardSet.findById(req.params.id);
+    if (!set) {
+      return res.status(404).json({ message: 'Flashcard set not found' });
+    }
+
+    set.likes += 1;
+    await set.save();
+
+    res.json({ likes: set.likes });
+  } catch (error) {
+    console.error('Like error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

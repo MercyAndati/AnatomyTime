@@ -18,7 +18,7 @@ export class AIGradingService {
     }
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    console.log('✅ Grading Service initialized via AI Studio');
+    console.log('Grading Service initialized via AI Studio');
   }
 
   async gradeFreeResponse(

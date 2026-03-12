@@ -1,4 +1,3 @@
-// backend/src/models/Quiz.ts
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IQuestion {
@@ -22,7 +21,6 @@ export interface IQuiz extends Document {
   type: 'standard';
   createdBy: mongoose.Types.ObjectId;
   sourcePrompt?: string;
-  sourceFileUrl?: string;
   timeLimitMinutes?: number;
   isPublic: boolean;
   tags: string[];
@@ -70,7 +68,6 @@ const quizSchema = new Schema<IQuiz>({
     required: true
   },
   sourcePrompt: String,
-  sourceFileUrl: String,
   timeLimitMinutes: Number,
   isPublic: { type: Boolean, default: false },
   tags: [String],
@@ -81,8 +78,6 @@ const quizSchema = new Schema<IQuiz>({
   timestamps: true
 });
 
-// Fix: Use function declaration without 'next' parameter
-// In newer Mongoose versions, pre-save hooks use the document context
 quizSchema.pre('save', function() {
   // Calculate total points from questions
   if (this.questions && this.questions.length > 0) {
@@ -92,7 +87,6 @@ quizSchema.pre('save', function() {
   } else {
     this.totalPoints = 0;
   }
-  // No need to call next() - just return
 });
 
 export default mongoose.model<IQuiz>('Quiz', quizSchema);

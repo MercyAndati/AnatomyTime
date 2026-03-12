@@ -3,10 +3,10 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IRegion {
   id: string;
   name: string;
-  points: string; // SVG polygon points for clickable areas
+  points: string;
   hint?: string;
   description?: string;
-  x?: number; // Alternative: bounding box coordinates
+  x?: number; 
   y?: number;
   width?: number;
   height?: number;
@@ -15,9 +15,9 @@ export interface IRegion {
 export interface IImageMapQuiz extends Document {
   title: string;
   description: string;
-  imageUrl: string; // Unlabeled image path
-  labeledImageUrl: string; // Labeled image for review
-  svgData?: string; // Alternative: SVG overlay data
+  imageUrl: string; 
+  labeledImageUrl: string; 
+  svgData?: string; 
   regions: IRegion[];
   difficulty: 'easy' | 'standard' | 'hard';
   category: string;
@@ -107,7 +107,6 @@ const imageMapQuizSchema = new Schema<IImageMapQuiz>({
   timestamps: true
 });
 
-// Index for search
 imageMapQuizSchema.index({ title: 'text', description: 'text', tags: 'text' });
 
 export default mongoose.model<IImageMapQuiz>('ImageMapQuiz', imageMapQuizSchema);

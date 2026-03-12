@@ -1,4 +1,3 @@
-// backend/src/routes/quiz.routes.ts
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
@@ -35,8 +34,8 @@ const upload = multer({
     const allowedTypes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PPTX
-      'application/vnd.ms-powerpoint', // PPT
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation', 
+      'application/vnd.ms-powerpoint',
       'text/plain'
     ];
     if (allowedTypes.includes(file.mimetype)) {
@@ -78,6 +77,7 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
       title, 
       topic,
       focusTopic,
+      questionType = 'mixed',
       numQuestions = 10, 
       difficulty = 'standard',
       timeLimitMinutes,
@@ -88,9 +88,6 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
       return res.status(400).json({ message: 'Please provide a prompt, topic, or upload study materials' });
     }
 
-    // ==========================================
-    // THE "GREEDY STUDENT" CHECK
-    // ==========================================
     const requestedQuestions = parseInt(numQuestions);
     if (isNaN(requestedQuestions) || requestedQuestions < 1 || requestedQuestions > 50) {
       return res.status(400).json({ 
@@ -99,13 +96,11 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
       });
     }
 
-    // ==========================================
-    // PHASE 1: IF TEXT ONLY (No File)
-    // ==========================================
+    //text only request
     if (!req.file) {
       const contentToValidate = prompt || topic || '';
       
-      console.log("🕵️ Running AI Bouncer on text input...");
+      console.log("Running AI validation check on text input...");
       const validation = await aiService.validateTextContent(contentToValidate);
       
       if (!validation.isAnatomy) {
@@ -114,12 +109,10 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
           error: `The AI rejected this text: ${validation.reason}`
         });
       }
-      console.log("✅ AI Text Bouncer approved the notes!");
+      console.log("AI Text validation approved the notes!");
     }
 
-    // ==========================================
-    // PHASE 2: IF FILE UPLOADED (The Cloud Pipeline)
-    // ==========================================
+    // file upload pipeline
     if (req.file) {
       // 1. Upload to Gemini
       geminiFile = await aiService.uploadFileToGemini(
@@ -130,9 +123,8 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
 
       if (!geminiFile) throw new Error("Failed to upload file to AI servers.");
 
-      // 2. The AI Bouncer Validation
-      console.log("🕵️ Running AI Bouncer validation...");
-      // ✅ CHANGED: Use geminiFile.mimeType instead of req.file.mimetype
+      // 2. The AI file Validation
+      console.log("Running AI file validation...");
       const validation = await aiService.validateFileContent(geminiFile.uri, geminiFile.mimeType);
       
       if (!validation.isAnatomy) {
@@ -141,65 +133,64 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
           error: `The AI rejected this file: ${validation.reason}`
         });
       }
-      console.log("✅ AI Bouncer approved the file!");
+      console.log("AI file validator approved the file!");
     }
 
-    // ==========================================
-    // PHASE 3: GENERATION
-    // ==========================================
+    // content generaton
     const focusInstruction = focusTopic 
       ? `\nCRITICAL INSTRUCTION: The user specifically requested to focus ONLY on: "${focusTopic}". Ignore irrelevant sections.` 
       : '';
 
     const aiPrompt = `
-You are an expert anatomy educator. Create a ${difficulty} difficulty anatomy quiz.
-${req.file ? `Base the quiz ONLY on the provided document.` : `Base the quiz on this topic: ${prompt || topic}`}
-${focusInstruction}
+      You are an expert anatomy educator. Create a ${difficulty} difficulty anatomy quiz.
+      ${req.file ? `Base the quiz ONLY on the provided document.` : `Base the quiz on this topic: ${prompt || topic}`}
+      ${focusInstruction}
 
-REQUIREMENTS:
-1. Create exactly ${numQuestions} questions.
-2. Mix multiple-choice and free-response questions.
-3. EXPLANATIONS: Produce appropriate explanations where necessary. If the question is easy/direct, use 1 brief sentence. If it is a hard question requiring context, use 2-3 sentences max. DO NOT write massive paragraphs.
-4. CRITICAL STRICT RULE: You must complete the entire JSON object. Pace your output length to guarantee the final closing brackets ']}' are printed.
+      REQUIREMENTS:
+      1. Create exactly ${numQuestions} questions.
+      2. QUESTION TYPES: ${
+        questionType === 'multiple-choice' ? 'Generate ONLY multiple-choice questions.' : 
+        questionType === 'free-response' ? 'Generate ONLY free-response questions.' : 
+        'Mix both multiple-choice and free-response questions.'
+      }
+      3. EXPLANATIONS: Produce appropriate explanations where necessary. If the question is easy/direct, use 1 brief sentence. If it is a hard question requiring context, use 2-3 sentences max. DO NOT write massive paragraphs.
+      4. CRITICAL STRICT RULE: You must complete the entire JSON object. Pace your output length to guarantee the final closing brackets ']}' are printed.
 
-OUTPUT FORMAT (STRICT JSON):
-{
-  "questions": [
-    {
-      "id": "q1",
-      "type": "multiple-choice", 
-      "text": "Question text here",
-      "options": ["Option A", "Option B", "Option C", "Option D"], 
-      "correctAnswer": "The exact correct answer here", 
-      "explanation": "Brief, appropriate explanation here.",
-      "points": 1
-    }
-  ],
-  "title": "Generate a short, specific 3-to-5 word title based on the core topic of the document or prompt",
-  "topic": "Generate a 1-to-2 word category (e.g., Neurology, Osteology)",
-  "difficulty": "${difficulty}"
-}
+      OUTPUT FORMAT (STRICT JSON):
+      {
+        "questions": [
+          {
+            "id": "q1",
+            "type": "multiple-choice", 
+            "text": "Question text here",
+            "options": ["Option A", "Option B", "Option C", "Option D"], 
+            "correctAnswer": "The exact correct answer here", 
+            "explanation": "Brief, appropriate explanation here.",
+            "points": 1
+          }
+        ],
+        "title": "Generate a short, specific 3-to-5 word title based on the core topic of the document or prompt",
+        "topic": "Generate a 1-to-2 word category (e.g., Neurology, Osteology)",
+        "difficulty": "${difficulty}"
+      }
 
-Return ONLY valid JSON. No markdown formatting.
-`;
+      Return ONLY valid JSON. No markdown formatting.
+      `;
 
-    // Send the generation request (passing the fileUri if we have one)
     const aiResponse = await aiService.generateContent(
       aiPrompt, 
-      { temperature: 0.7, maxTokens: 8192 }, // ✅ Bumped to absolute maximum
+      { temperature: 0.7, maxTokens: 8192 }, 
       geminiFile?.uri,
       geminiFile?.mimeType
     );
 
-    // ==========================================
-    // PHASE 4: PARSE AND SANITIZE JSON
-    // ==========================================
+    //PARSE AND SANITIZE JSON
     let quizData;
     try {
-      // 1. Strip out annoying Markdown formatting that AI sometimes adds
+      // 1. Strip out Markdown formatting that AI sometimes adds
       let cleanText = aiResponse.text.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
       
-      // 2. Safely extract just the JSON object
+      // 2. Safely extract the JSON object
       const startIndex = cleanText.indexOf('{');
       const endIndex = cleanText.lastIndexOf('}');
       
@@ -210,7 +201,7 @@ Return ONLY valid JSON. No markdown formatting.
       const jsonString = cleanText.substring(startIndex, endIndex + 1);
       quizData = JSON.parse(jsonString);
       
-      // 3. THE SAFETY NET: Ensure every question has the required DB fields
+      // 3.Ensure every question has the required DB fields
       quizData.questions = quizData.questions.map((q: any, index: number) => ({
         ...q,
         id: q.id || `q${index + 1}`,
@@ -222,10 +213,8 @@ Return ONLY valid JSON. No markdown formatting.
       }));
 
     } catch (parseError) {
-      // 🚨 IF IT FAILS NOW, WE WILL SEE EXACTLY WHAT THE AI WROTE!
-      console.error("\n❌ ================= JSON PARSE FAILED =================");
+      console.error("\nJSON PARSE FAILED");
       console.error("RAW AI OUTPUT THAT CAUSED THE CRASH:\n", aiResponse.text);
-      console.error("========================================================\n");
       throw new Error('AI response was invalid. Please try again.');
     }
 
@@ -257,7 +246,7 @@ Return ONLY valid JSON. No markdown formatting.
     });
 
   } catch (error) {
-    // 🚦 Catch the custom Rate Limit error or standard errors
+    //Catch the custom Rate Limit error or standard errors
     const errorMessage = error instanceof Error ? error.message : 'Failed to generate quiz';
     
     // If it's a rate limit error, send a 429 status code back to the frontend
@@ -268,12 +257,12 @@ Return ONLY valid JSON. No markdown formatting.
       error: errorMessage 
     });
   } finally {
-    // 🧹 CLEANUP: ALWAYS delete files to save space!
+    //delete files to save space!
     if (req.file) {
       try { fs.unlinkSync(req.file.path); } catch (e) {} // Delete local Multer file
     }
     if (geminiFile) {
-      await aiService.deleteFileFromGemini(geminiFile.name); // Delete from Google Cloud
+      await aiService.deleteFileFromGemini(geminiFile.name);
     }
   }
 });

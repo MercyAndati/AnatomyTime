@@ -16,7 +16,6 @@ export interface AIGenerationOptions {
 export class AIService {
   private genAI: GoogleGenerativeAI;
   private fileManager: GoogleAIFileManager;
-  // ✅ Reverted back to your working model!
   private modelName = 'gemini-2.5-flash'; 
 
   constructor() {
@@ -25,10 +24,10 @@ export class AIService {
     }
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     this.fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY);
-    console.log('✅ AI Service & File Manager initialized');
+    console.log('AI Service & File Manager initialized');
   }
 
-  // 🚦 The Master Error Handler
+  //Error Handler
   private handleAIError(error: any): never {
     console.error('AI API Error:', error);
     const errMsg = error.message || '';
@@ -44,7 +43,6 @@ export class AIService {
     throw new Error(`AI Service failed: ${errMsg}`);
   }
 
-  // 1. Upload File to Google's Server
   async uploadFileToGemini(filePath: string, originalMimeType: string, displayName: string) {
     try {
       const ext = path.extname(displayName).toLowerCase();
@@ -55,7 +53,7 @@ export class AIService {
       else if (ext === '.docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
       else if (ext === '.txt') mimeType = 'text/plain';
 
-      console.log(`📤 Uploading ${displayName} to Gemini as ${mimeType}...`);
+      console.log(`Uploading ${displayName} to Gemini as ${mimeType}...`);
       
       const uploadResult = await this.fileManager.uploadFile(filePath, {
         mimeType,
@@ -63,14 +61,14 @@ export class AIService {
       });
       
       let file = await this.fileManager.getFile(uploadResult.file.name);
-      console.log(`⏳ Waiting for Google AI to process the document...`);
+      console.log(`Waiting for Google AI to process the document...`);
       
       while (file.state === 'PROCESSING') {
         process.stdout.write('.'); 
         await new Promise((resolve) => setTimeout(resolve, 2000)); 
         file = await this.fileManager.getFile(uploadResult.file.name);
       }
-      console.log(`\n✅ File processed and ready! State: ${file.state}`);
+      console.log(`\n File processed and ready! State: ${file.state}`);
       
       if (file.state === 'FAILED') {
         throw new Error('Google AI failed to process this document. It might be corrupted.');
@@ -82,28 +80,25 @@ export class AIService {
     }
   }
 
-  // 2. Delete File from Google
   async deleteFileFromGemini(fileName: string) {
     try {
       await this.fileManager.deleteFile(fileName);
-      console.log(`🗑️ Deleted ${fileName} from Gemini storage`);
+      console.log(`Deleted ${fileName} from Gemini storage`);
     } catch (error) {
-      console.warn(`⚠️ Failed to delete ${fileName} from Gemini:`, error);
+      console.warn(`Failed to delete ${fileName} from Gemini:`, error);
     }
   }
 
-  // 3. THE BOUNCER
   async validateFileContent(fileUri: string, mimeType: string): Promise<{ isAnatomy: boolean, reason: string }> {
     try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
       
-      // ✅ Smarter, more forgiving prompt
       const prompt = `
       You are a document classification AI for a biology study tool. 
       Your job is to determine if this document is appropriate for generating an anatomy, biology, or medical quiz.
       
       Does this document contain substantial information about human or animal anatomy, biology, physiology, or medicine? 
-      (NOTE: It is completely fine if it is a Wikipedia article, contains website navigation menus, bibliographies, or general evolutionary history, as long as the core subject matter relates to the body/biology).
+      (NOTE: Ignore peripheral text such as author details, website navigation elements, bibliographies, or publication metadata. As long as the primary subject matter of the document relates to biology or medicine, it is valid).
       
       Return ONLY valid JSON in this exact format:
       {"isAnatomy": true, "reason": "Brief 1-sentence explanation"}
@@ -124,7 +119,6 @@ export class AIService {
     }
   }
 
-  // 3.5 THE TEXT BOUNCER
   async validateTextContent(text: string): Promise<{ isAnatomy: boolean, reason: string }> {
     try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
@@ -134,7 +128,8 @@ export class AIService {
       Evaluate the following text. It might be a massive wall of study notes, OR it might be a short request/prompt from a student asking for a quiz.
       
       Rule: Does this text either contain biological/anatomical facts, OR is it a request to study human/animal anatomy, biology, physiology, or medicine?
-      (Note: If it is a recipe, programming code, or unrelated topic, reject it).
+      
+      (Note: Ignore peripheral text such as author details, website navigation elements, bibliographies, or publication metadata that may have been accidentally copy-pasted. As long as the primary subject matter of the text relates to biology or medicine, it is valid. However, strictly reject any text where the primary focus is entirely outside the medical/biological domain, such as recipes, programming code, or unrelated subjects.)
       
       Return ONLY valid JSON in this exact format:
       {"isAnatomy": true, "reason": "Brief 1-sentence explanation"}
@@ -154,7 +149,6 @@ export class AIService {
     }
   }
 
-  // 4. Generate Content
   async generateContent(
     prompt: string, 
     options: AIGenerationOptions = {},
@@ -165,7 +159,7 @@ export class AIService {
 
     try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
-      console.log('🚀 Generating content...');
+      console.log('Generating content...');
       
       const parts: any[] = [];
       if (fileUri) {

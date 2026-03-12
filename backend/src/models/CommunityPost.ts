@@ -1,18 +1,15 @@
-// backend/src/models/CommunityPost.ts
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICommunityPost extends Document {
   title: string;
-  content?: string; // For simple text notes
+  content?: string;
   type: 'note' | 'quiz_share' | 'flashcard_share' | 'image_map_share';
-  // References - ONLY ONE of these will be populated based on `type`
   sharedBy: mongoose.Types.ObjectId;
   quizId?: mongoose.Types.ObjectId;
   flashcardSetId?: mongoose.Types.ObjectId;
   imageMapQuizId?: mongoose.Types.ObjectId;
-  // Engagement metrics
   upvotes: number;
-  upvotedBy: mongoose.Types.ObjectId[]; // Users who upvoted
+  upvotedBy: mongoose.Types.ObjectId[];
   comments: mongoose.Types.ObjectId[];
   noteId?: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -34,10 +31,9 @@ const communityPostSchema = new Schema<ICommunityPost>({
   noteId: { type: Schema.Types.ObjectId, ref: 'Note' },
   upvotes: { type: Number, default: 0 },
   upvotedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-  comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }] // Optional
+  comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }]
 }, { timestamps: true });
 
-// Add a compound index to ensure proper querying
 communityPostSchema.index({ type: 1, createdAt: -1 });
 
 export default mongoose.model<ICommunityPost>('CommunityPost', communityPostSchema);

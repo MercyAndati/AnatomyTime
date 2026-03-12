@@ -1,4 +1,3 @@
-// backend/src/models/QuizAttempt.ts
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IAnswer {
@@ -72,7 +71,6 @@ const quizAttemptSchema = new Schema<IQuizAttempt>({
   timestamps: true
 });
 
-// Fix: Calculate percentage without next parameter
 quizAttemptSchema.pre('save', function() {
   if (this.totalPoints > 0) {
     this.percentage = Math.round((this.score / this.totalPoints) * 100);
