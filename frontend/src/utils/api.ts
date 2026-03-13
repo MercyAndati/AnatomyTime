@@ -138,6 +138,7 @@ class ApiClient {
     difficulty?: string;
     timeLimitMinutes?: number;
     isRapid?: boolean;
+    questionType?: string;
   }): Promise<GenerateQuizResponse> {
     return this.request<GenerateQuizResponse>('/quiz/generate', {
       method: 'POST',

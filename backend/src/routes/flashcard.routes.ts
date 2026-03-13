@@ -85,6 +85,14 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
       });
     }
 
+    // MEMORY SHIELD: capture massive copy-paste payloads
+    if (prompt && prompt.length > 100000) {
+      return res.status(400).json({ 
+        message: 'Text payload too large', 
+        error: 'Please paste a smaller section of notes (under 25,000 characters), or use the File Upload feature for entire textbook chapters.' 
+      });
+    }
+
     if (!req.file) {
       const contentToValidate = prompt || topic || '';
       console.log("Running AI validation check on text input...");

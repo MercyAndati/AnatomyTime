@@ -48,23 +48,32 @@ export const Dashboard = () => {
   const loadUserData = async () => {
     setLoading(true);
     try {
+      // 1. Fetch Quizzes
       const quizzesRes = await api.getMyQuizzes();
       setQuizzes(quizzesRes.quizzes);
       
+      // 2. Fetch Flashcards
       const flashcardsRes = await api.getMyFlashcards();
       setFlashcards(flashcardsRes.sets);
       
+      // 3. Fetch Quiz Attempts (✅ NEW)
+      const attemptsRes = await api.getMyAttempts();
+      const userAttempts = attemptsRes.attempts || [];
+      setAttempts(userAttempts);
+      
+      // 4. Calculate Stats
       const totalQuizzes = quizzesRes.quizzes.length;
       const totalFlashcards = flashcardsRes.sets.length;
       
-      const totalScore = 0;  // Placeholders
-      const attemptCount = 0;
+      const attemptCount = userAttempts.length;
+      // Calculate sum of all percentages
+      const totalScoreSum = userAttempts.reduce((sum, attempt) => sum + (attempt.percentage || 0), 0);
       
       setStats({
         totalQuizzes,
         totalFlashcards,
         totalAttempts: attemptCount,
-        averageScore: attemptCount > 0 ? Math.round(totalScore / attemptCount) : 0
+        averageScore: attemptCount > 0 ? Math.round(totalScoreSum / attemptCount) : 0
       });
       
     } catch (error) {

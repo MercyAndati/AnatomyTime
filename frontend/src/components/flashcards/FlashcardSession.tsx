@@ -61,6 +61,19 @@ export const FlashcardSession = ({
 
   const masteredCount = Object.values(mastered).filter(Boolean).length;
 
+  // ✅ Helper to convert AI Markdown bold (**text**) into actual bold React text
+  const formatText = (text?: string) => {
+    if (!text) return null;
+    // Splits the string by ** ** and maps it to normal or bold text
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={i} className="font-extrabold text-primary">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
   return (
     <div className="min-h-screen pb-20 overflow-x-hidden">
       <div className="container mx-auto px-4 pt-24 max-w-3xl">
@@ -95,7 +108,7 @@ export const FlashcardSession = ({
               <div className="w-full max-w-full overflow-y-auto no-scrollbar max-h-[400px]">
                 <p className="text-xs sm:text-sm text-muted-foreground mb-4 uppercase tracking-wider font-semibold">Front</p>
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-medium leading-relaxed break-words">
-                  {currentCard?.front}
+                  {formatText(currentCard?.front)}
                 </h2>
                 {currentCard?.hint && !isFlipped && (
                   <div className="mt-6 inline-block bg-primary/10 px-4 py-2 rounded-lg border border-primary/20">
@@ -114,7 +127,7 @@ export const FlashcardSession = ({
               <div className="w-full max-w-full overflow-y-auto no-scrollbar max-h-[400px]">
                 <p className="text-xs sm:text-sm text-primary mb-4 uppercase tracking-wider font-semibold">Back / Answer</p>
                 <h2 className="text-lg sm:text-xl md:text-2xl leading-relaxed break-words text-foreground">
-                  {currentCard?.back}
+                  {formatText(currentCard?.back)}
                 </h2>
               </div>
             </Card>

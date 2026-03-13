@@ -159,6 +159,7 @@ const Flashcards = () => {
                   </Button>
                 </div>
 
+                {/* ✅ Smart Inline Error Display */}
                 {fileError && (
                   <div className="bg-destructive/10 text-destructive p-4 rounded-md text-sm border border-destructive/20 flex flex-col gap-2">
                     <div className="flex items-start gap-2 font-semibold">
@@ -166,7 +167,21 @@ const Flashcards = () => {
                       <p>File Processing Failed</p>
                     </div>
                     <p className="opacity-90 ml-6">{fileError}</p>
-                    <p className="ml-6 mt-1 text-xs opacity-80 font-medium">Please remove this file and paste your notes below instead.</p>
+                    
+                    {/* Dynamic User Help based on the specific error */}
+                    {fileError.toLowerCase().includes('anatomy') || fileError.toLowerCase().includes('rejected') ? (
+                       <p className="ml-6 mt-1 text-xs opacity-100 font-bold text-destructive">
+                         Please upload a document that specifically covers anatomy, biology, or medical topics.
+                       </p>
+                    ) : fileError.toLowerCase().includes('drm') || fileError.toLowerCase().includes('encrypted') ? (
+                       <p className="ml-6 mt-1 text-xs opacity-90 font-medium bg-background/50 p-2 rounded border border-destructive/10">
+                         💡 <strong>Pro Tip:</strong> If this is an encrypted textbook, try opening it in Chrome, selecting "Print", and saving as a new PDF to remove the publisher's lock!
+                       </p>
+                    ) : (
+                       <p className="ml-6 mt-1 text-xs opacity-80 font-medium">
+                         Please remove this file and paste your notes into the text box below instead.
+                       </p>
+                    )}
                   </div>
                 )}
 
@@ -220,12 +235,32 @@ const Flashcards = () => {
 
               <div className="border rounded-lg p-6 bg-card">
                 <h2 className="text-sm font-medium mb-3">Paste Notes OR Describe Topic</h2>
-                <Textarea
-                  placeholder="Paste your extensive notes here (no length limit) or describe the topic..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="min-h-[150px] resize-y"
-                />
+                <div className="relative">
+                  <Textarea
+                    maxLength={100000}
+                    placeholder="Paste your notes here or describe a specific anatomy topic..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="min-h-[150px] resize-y pb-8"
+                  />
+                  <div className={`absolute bottom-2 right-3 text-xs font-medium ${
+                    notes.length > 98000 ? 'text-destructive' : 'text-muted-foreground'
+                  }`}>
+                    {notes.length.toLocaleString()} / 100,000 chars
+                  </div>
+                </div>
+                
+                {/* Warning text when limit is hit */}
+                {notes.length >= 100000 && (
+                  <p className="text-xs font-bold text-destructive mt-1 animate-in fade-in">
+                    ⚠️ Character limit reached. Please remove some text or narrow your focus to continue.
+                  </p>
+                )}
+                
+                <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3" />
+                  For the best AI accuracy, paste notes for a single chapter or system at a time.
+                </p>
               </div>
             </>
           )}

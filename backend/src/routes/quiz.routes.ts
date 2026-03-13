@@ -96,6 +96,14 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
       });
     }
 
+    // MEMORY SHIELD: capture massive copy-paste payloads
+    if (prompt && prompt.length > 100000) {
+      return res.status(400).json({ 
+        message: 'Text payload too large', 
+        error: 'Please paste a smaller section of notes (under 25,000 characters), or use the File Upload feature for entire textbook chapters.' 
+      });
+    }
+
     //text only request
     if (!req.file) {
       const contentToValidate = prompt || topic || '';
@@ -442,7 +450,7 @@ router.post('/:id/attempt', verifyToken, async (req: any, res) => {
 
     if (quiz.timeLimitMinutes && isRapid) {
       const timeLimitSeconds = quiz.timeLimitMinutes * 60;
-      // ✅ Added a 30-second grace period to account for network latency and auto-submit delays
+      //Added a 30-second grace period to account for network latency and auto-submit delays
       if (timeSpent > timeLimitSeconds + 30) {
         return res.status(400).json({ 
           message: 'Time limit exceeded',
@@ -557,6 +565,20 @@ router.post('/:id/attempt', verifyToken, async (req: any, res) => {
 
   } catch (error) {
     console.error('Submit quiz attempt error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+//Get ALL user attempts for the Dashboard stats
+router.get('/attempts/my-all', verifyToken, async (req: any, res) => {
+  try {
+    const attempts = await QuizAttempt.find({ 
+      user: req.userId,
+      quizType: 'ai-quiz' 
+    }).lean();
+    res.json({ attempts });
+  } catch (error) {
+    console.error('Get all attempts error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
