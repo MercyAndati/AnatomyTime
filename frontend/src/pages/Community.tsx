@@ -229,24 +229,14 @@ const Community = () => {
 
   const handleDownloadNote = async (noteId: string, title?: string) => {
     try {
-      const note = await api.getNote(noteId);
+      const note = await api.getNote(noteId); // We still call this to increment the download counter!
       if (!note.fileUrl) return;
-      const fileName = note.fileUrl.split('/').pop();
-      const response = await fetch(api.getNoteFileUrl(fileName!));
-      const blob = await response.blob();
-      const safeTitle = (title || note.title).replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const ext = fileName?.includes('.') ? fileName.split('.').pop() : '';
       
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = ext ? `${safeTitle}.${ext}` : safeTitle;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      // Since it's a Cloudinary URL, we can just open it directly
+      window.open(note.fileUrl, '_blank', 'noopener,noreferrer');
+      
     } catch {
-      toast({ title: "Error", description: "Failed to download", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to open document", variant: "destructive" });
     }
   };
 
@@ -501,8 +491,16 @@ const Community = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm" onClick={() => setPreviewPost(post)} className="hidden sm:flex text-muted-foreground"><Eye className="h-4 w-4 mr-2" />Preview</Button>
-                        {post.type === 'image_map_share' || post.type === 'quiz_share' ? (
-                          <Button size="sm" onClick={() => navigate(`/quiz/${post.resourceId || post.id}`)} className="bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"><Play className="h-4 w-4 md:mr-2" /><span className="hidden md:inline">Take Quiz</span></Button>
+                        {post.type === 'image_map_share' ? (
+                          <Button size="sm" onClick={() => navigate(`/image-map/${post.resourceId || post.id}`)} className="bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary">
+                            <Map className="h-4 w-4 md:mr-2" />
+                            <span className="hidden md:inline">Play Map</span>
+                          </Button>
+                        ) : post.type === 'quiz_share' ? (
+                          <Button size="sm" onClick={() => navigate(`/quiz/${post.resourceId || post.id}`)} className="bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary">
+                            <Play className="h-4 w-4 md:mr-2" />
+                            <span className="hidden md:inline">Take Quiz</span>
+                          </Button>
                         ) : post.type === 'flashcard_share' ? (
                           <Button size="sm" onClick={() => navigate(`/flashcards/${post.resourceId || post.id}`)} className="bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"><BookOpen className="h-4 w-4 md:mr-2" /><span className="hidden md:inline">Study Cards</span></Button>
                         ) : (

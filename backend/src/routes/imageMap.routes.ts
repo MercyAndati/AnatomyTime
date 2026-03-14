@@ -1,8 +1,9 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import ImageMapQuiz from '../models/ImageMapQuiz';
-import QuizAttempt from '../models/QuizAttempt'; // FIXED SPELLING
+import QuizAttempt from '../models/QuizAttempt';
 import User from '../models/User';
+import { cloudinary } from '../config/cloudinary';
 
 const router = express.Router();
 
@@ -35,7 +36,6 @@ router.get('/', async (req, res) => {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
         const userId = (decoded as any).userId;
-        // Show public quizzes OR private quizzes created by this user
         query = {
           $or: [
             { isPublic: true },
@@ -43,14 +43,12 @@ router.get('/', async (req, res) => {
           ]
         };
       } catch (err) {
-        // Invalid token, ignore and just show public
       }
     }
 
     if (category) query.category = category;
     if (difficulty) query.difficulty = difficulty;
 
-    // Search logic
     if (search) {
       query = {
         ...query,
@@ -88,7 +86,6 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Quiz not found' });
     }
 
-    // Increment play count
     quiz.plays += 1;
     await quiz.save();
 
@@ -134,7 +131,7 @@ router.post('/:id/attempt', verifyToken, async (req: any, res: any) => {
       return res.status(404).json({ message: 'Quiz not found' });
     }
 
-    // Calculate score - KEEPING YOUR ORIGINAL LOGIC
+    // Calculate score
     let correctCount = 0;
     let totalPoints = 0;
     const gradedAnswers = answers.map((answer: any) => {
@@ -143,9 +140,8 @@ router.post('/:id/attempt', verifyToken, async (req: any, res: any) => {
 
       if (isCorrect) correctCount++;
       
-      // Each correct answer is worth 1 point
       const pointsAwarded = isCorrect ? 1 : 0;
-      totalPoints += 1; // Each question is worth 1 point max
+      totalPoints += 1;
 
       return {
         questionId: answer.questionId,
@@ -161,11 +157,11 @@ router.post('/:id/attempt', verifyToken, async (req: any, res: any) => {
     const score = correctCount;
     const percentage = totalPoints > 0 ? Math.round((score / totalPoints) * 100) : 0;
 
-    // Save attempt - USING NEW SCHEMA FIELDS
+    // Save attempt
     const attempt = new QuizAttempt({
       user: req.userId,
-      quizRef: quizId, // Changed from quizId to quizRef
-      quizType: 'image-map-quiz', // Must match enum in schema
+      quizRef: quizId,
+      quizType: 'image-map-quiz',
       score,
       totalPoints,
       percentage,
@@ -176,7 +172,7 @@ router.post('/:id/attempt', verifyToken, async (req: any, res: any) => {
 
     await attempt.save();
 
-    // Update quiz stats - KEEPING YOUR ORIGINAL LOGIC
+    // Update quiz stats
     quiz.plays += 1;
     quiz.avgScore = (quiz.avgScore * (quiz.plays - 1) + percentage) / quiz.plays;
     await quiz.save();
@@ -195,7 +191,7 @@ router.post('/:id/attempt', verifyToken, async (req: any, res: any) => {
   }
 });
 
-// Delete image map quiz - KEEPING YOUR ORIGINAL LOGIC
+// Delete
 router.delete('/:id', verifyToken, async (req: any, res: any) => {
   try {
     const quiz = await ImageMapQuiz.findById(req.params.id);
@@ -211,21 +207,35 @@ router.delete('/:id', verifyToken, async (req: any, res: any) => {
       }
     }
 
-    // Delete associated images
-    const fs = await import('fs');
-    const path = await import('path');
-
-    const deleteFile = (relativePath: string) => {
-      if (!relativePath) return;
-      const cleanPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
-      const absolutePath = path.join(__dirname, '../../', cleanPath);
-      if (fs.existsSync(absolutePath)) {
-        fs.unlinkSync(absolutePath);
+    //Cloudinary deletion with logging
+    const deleteFromCloudinary = async (url: string) => {
+      if (!url || !url.includes('cloudinary.com')) return;
+      try {
+        const urlParts = url.split('/');
+        const folderIndex = urlParts.findIndex(part => part === 'anatomytime');
+        
+        if (folderIndex !== -1) {
+          let publicId = urlParts.slice(folderIndex).join('/');
+          if (publicId.includes('.')) {
+            publicId = publicId.substring(0, publicId.lastIndexOf('.'));
+          }
+          
+          console.log(`\n[Cloudinary] Attempting to destroy public_id: "${publicId}"`);
+          
+          const result = await cloudinary.uploader.destroy(publicId, { 
+            resource_type: 'image',
+            invalidate: true 
+          });
+          
+          console.log(`[Cloudinary] Response for ${publicId}:`, result);
+        }
+      } catch (err) {
+        console.error("\n[Cloudinary] API Error:", err);
       }
     };
 
-    deleteFile(quiz.imageUrl);
-    deleteFile(quiz.labeledImageUrl);
+    await deleteFromCloudinary(quiz.imageUrl);
+    await deleteFromCloudinary(quiz.labeledImageUrl);
 
     await ImageMapQuiz.deleteOne({ _id: quiz._id });
 
@@ -236,7 +246,7 @@ router.delete('/:id', verifyToken, async (req: any, res: any) => {
   }
 });
 
-// Share quiz (toggle visibility) - KEEPING YOUR ORIGINAL LOGIC
+// Share quiz
 router.put('/:id/share', verifyToken, async (req: any, res: any) => {
   try {
     const quiz = await ImageMapQuiz.findById(req.params.id);
@@ -264,7 +274,7 @@ router.put('/:id/share', verifyToken, async (req: any, res: any) => {
   }
 });
 
-// Unshare quiz (remove from community) - KEEPING YOUR ORIGINAL LOGIC
+// Unshare quiz
 router.put('/:id/unshare', verifyToken, async (req: any, res: any) => {
   try {
     const quiz = await ImageMapQuiz.findById(req.params.id);
@@ -288,7 +298,7 @@ router.put('/:id/unshare', verifyToken, async (req: any, res: any) => {
   }
 });
 
-// Like a quiz - KEEPING YOUR ORIGINAL LOGIC
+// Like a quiz
 router.post('/:id/like', verifyToken, async (req, res) => {
   try {
     const quiz = await ImageMapQuiz.findById(req.params.id);

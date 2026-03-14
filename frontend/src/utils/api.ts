@@ -26,10 +26,6 @@ export interface Feedback {
 class ApiClient {
   private baseUrl: string;
   private defaultTimeout = 10000;
-  
-  getNoteFileUrl(fileName: string): string {
-    return `${this.baseUrl}/notes/file/${fileName}`;
-  }
 
   constructor() {
     this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';

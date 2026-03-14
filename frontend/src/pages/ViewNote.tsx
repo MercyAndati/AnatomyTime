@@ -42,14 +42,13 @@ export const ViewNote = () => {
       setNote(data);
       
       if (data.fileUrl) {
-        const fileName = data.fileUrl.split('/').pop();
-        const url = `${API_BASE}/api/notes/file/${fileName}`;
-        setFileUrl(url);
+        // ✅ NEW: Just use the Cloudinary URL directly!
+        setFileUrl(data.fileUrl);
 
-        // If it's a text file, fetch the content to display natively
+        // If it's a text file, fetch the content from Cloudinary to display natively
         if (data.fileType?.includes('text')) {
           try {
-            const response = await fetch(url);
+            const response = await fetch(data.fileUrl);
             const text = await response.text();
             setTextContent(text);
           } catch (err) {
@@ -67,7 +66,7 @@ export const ViewNote = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate, API_BASE]);
+  }, [id, navigate]);
 
   useEffect(() => {
     loadNote();
@@ -78,27 +77,15 @@ export const ViewNote = () => {
     
     try {
       if (note.fileUrl) {
-        const fileName = note.fileUrl.split('/').pop() || 'note';
-        const safeTitle = note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        const fileExt = fileName.includes('.') ? fileName.split('.').pop() : '';
-        const downloadName = fileExt ? `${safeTitle}.${fileExt}` : safeTitle;
-        
-        const response = await fetch(`${API_BASE}/api/notes/file/${fileName}`);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = downloadName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        // ✅ NEW: Open the Cloudinary file securely in a new tab
+        window.open(note.fileUrl, '_blank', 'noopener,noreferrer');
         
         toast({
-          title: "Download started",
-          description: downloadName,
+          title: "Opening document",
+          description: "Document opened in a new tab",
         });
       } else {
+        // Keep your existing logic for raw text notes that don't have a file attached
         const safeTitle = note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
         const blob = new Blob([note.content], { type: 'text/plain' });
         const url = window.URL.createObjectURL(blob);
@@ -113,7 +100,7 @@ export const ViewNote = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to download note",
+        description: "Failed to open note",
         variant: "destructive",
       });
     }

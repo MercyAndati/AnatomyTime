@@ -8,6 +8,7 @@ import User from '../models/User';
 import Note from '../models/Note';
 import fs from 'fs';
 import path from 'path';
+import { cloudinary } from '../config/cloudinary';
 
 const router = express.Router();
 
@@ -262,13 +263,32 @@ router.delete('/:id', verifyToken, async (req: any, res) => {
     if (post.type === 'note' && post.noteId) {
       const note = await Note.findById(post.noteId);
       if (note) {
-        if (note.fileUrl) {
-          const filePath = path.join(__dirname, '../..', note.fileUrl);
-
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+        // Cloudinary Deletion Logic
+        if (note.fileUrl && note.fileUrl.includes('cloudinary.com')) {
+          try {
+            const urlParts = note.fileUrl.split('/');
+            const folderIndex = urlParts.findIndex(part => part === 'anatomytime');
+            
+            if (folderIndex !== -1) {
+              let publicId = urlParts.slice(folderIndex).join('/');
+              const isRaw = note.fileUrl.includes('/raw/upload/');
+              
+              // Images don't use extensions in their public_id, but raw files do
+              if (!isRaw && publicId.includes('.')) {
+                publicId = publicId.substring(0, publicId.lastIndexOf('.'));
+              }
+              await cloudinary.uploader.destroy(publicId, { resource_type: isRaw ? 'raw' : 'image' });
+            }
+          } catch (err) {
+            console.error("Cloudinary cleanup failed:", err);
           }
+        } else if (note.fileUrl) {
+          const fs = await import('fs');
+          const path = await import('path');
+          const filePath = path.join(__dirname, '../..', note.fileUrl);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         }
+        
         await Note.deleteOne({ _id: note._id });
       }
     }

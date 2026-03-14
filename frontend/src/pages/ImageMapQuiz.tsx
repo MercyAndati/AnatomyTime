@@ -112,6 +112,13 @@ const ImageMapQuiz = () => {
     return () => clearInterval(interval);
   }, [selectedQuiz, showResults, showReview, quizStartTime]);
 
+  // ✅ Helper to safely render both old local images and new Cloudinary images
+  const getImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${BACKEND_URL}${url}`;
+  };
+
   const fetchQuizzes = async () => {
     setLoading(true);
     try {
@@ -423,7 +430,7 @@ const ImageMapQuiz = () => {
         <div className="flex-1 overflow-auto p-4 flex items-start justify-center cursor-grab active:cursor-grabbing custom-scrollbar">
           <div className="min-w-full flex justify-center h-max pb-10">
             <img
-              src={`${BACKEND_URL}${selectedQuiz.labeledImageUrl}`}
+              src={getImageUrl(selectedQuiz.labeledImageUrl)}
               alt="Full screen labeled"
               className="transition-all duration-200 rounded-lg shadow-2xl border border-primary/20 bg-white"
               style={{ 
@@ -584,7 +591,7 @@ const ImageMapQuiz = () => {
                 onClick={() => setIsImageModalOpen(true)}
               >
                 <img
-                  src={`${BACKEND_URL}${selectedQuiz.labeledImageUrl}`}
+                  src={getImageUrl(selectedQuiz.labeledImageUrl)}
                   alt={`${selectedQuiz.title} - Labeled`}
                   className="w-full transition-all duration-300 group-hover:scale-[1.01] group-hover:opacity-60"
                 />
@@ -837,7 +844,7 @@ const ImageMapQuiz = () => {
                     {/* Main Image */}
                     <img
                       ref={imageRef}
-                      src={`${BACKEND_URL}${selectedQuiz.imageUrl}`}
+                      src={getImageUrl(selectedQuiz.imageUrl)}
                       alt={selectedQuiz.title}
                       className={`${imageLoaded ? 'block' : 'hidden'} max-w-full h-auto`}
                       onLoad={handleImageLoad}
@@ -960,7 +967,7 @@ const ImageMapQuiz = () => {
                 onClick={() => setIsImageModalOpen(true)}
               >
                 <img
-                  src={`${BACKEND_URL}${selectedQuiz.labeledImageUrl}`}
+                  src={getImageUrl(selectedQuiz.labeledImageUrl)}
                   alt={`${selectedQuiz.title} - Labeled`}
                   className="w-full transition-all duration-300 group-hover:scale-[1.01] group-hover:opacity-60"
                 />
