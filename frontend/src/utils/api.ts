@@ -242,8 +242,16 @@ class ApiClient {
   }
   
   // Community endpoints
-  async getCommunityPosts(category?: string): Promise<CommunityPostsResponse> {
-    const url = category && category !== 'All' ? `/community?category=${category}` : '/community';
+  async getCommunityPosts(category?: string, search?: string, sortBy?: string): Promise<CommunityPostsResponse> {
+    const params = new URLSearchParams();
+    
+    if (category && category !== 'All') params.append('category', category);
+    if (search) params.append('search', search);
+    if (sortBy) params.append('sortBy', sortBy);
+
+    const queryString = params.toString();
+    const url = queryString ? `/community?${queryString}` : '/community';
+
     return this.request<CommunityPostsResponse>(url);
   }
 
@@ -317,12 +325,6 @@ class ApiClient {
 
   async getNote(id: string): Promise<Note> {
     return this.request<Note>(`/notes/${id}`);
-  }
-
-  async shareNote(noteId: string): Promise<{ message: string; post: CommunityPost }> {
-    return this.request<{ message: string; post: CommunityPost }>(`/notes/${noteId}/share`, {
-      method: 'POST',
-    });
   }
 
   async deleteNote(noteId: string): Promise<{ message: string }> {

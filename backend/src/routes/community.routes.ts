@@ -27,16 +27,14 @@ const verifyToken = (req: any, res: any, next: any) => {
   }
 };
 
-// Get community posts (aggregated from CommunityPost collection)
+// Get community posts
 router.get('/', async (req, res) => {
   try {
     const { category, search, sortBy ='latest' } = req.query;
 
-    // Build query for CommunityPost
     let query: any = {};
     
     if (category && category !== 'All') {
-      // Map frontend categories to CommunityPost types
       const categoryMap: { [key: string]: string } = {
         'Quiz': 'quiz_share',
         'Flashcards': 'flashcard_share',
@@ -49,7 +47,6 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Text search
     if (search) {
       query.$or=[
         {title:{ $regex: search, $options: 'i'}},
@@ -57,14 +54,13 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    //determine sort order
     let sortOptions: any={};
     if (sortBy === 'popular') {
       sortOptions = { upvotes: -1, createdAt: -1 };
     } else if (sortBy === 'most_commented') {
       sortOptions = { comments: -1, createdAt: -1 };
     } else {
-      sortOptions = { createdAt: -1 }; // latest
+      sortOptions = { createdAt: -1 }; 
     }
     
     // Fetch community posts with populated references
@@ -91,13 +87,13 @@ router.get('/', async (req, res) => {
         id: post._id,
         author: (post.sharedBy as any)?.name || 'Unknown',
         title: post.title,
-        type: post.type, // Keep original type for backend operations
-        typeDisplay: typeDisplayMap[post.type] || post.type, // Display-friendly type
+        type: post.type,
+        typeDisplay: typeDisplayMap[post.type] || post.type,
         likes: post.upvotes || 0,
         comments: post.comments?.length || 0,
         createdAt: post.createdAt,
         description: post.content || '',
-        alreadyShared: true // Since it's from CommunityPost, it's already shared
+        alreadyShared: true
       };
 
       // Add resource-specific data
@@ -229,7 +225,7 @@ router.post('/share', async (req, res) => {
   }
 });
 
-// Delete a community post (admin or owner)
+// Delete a community post
 router.delete('/:id', verifyToken, async (req: any, res) => {
   try {
     const post = await CommunityPost.findById(req.params.id);
@@ -246,7 +242,6 @@ router.delete('/:id', verifyToken, async (req: any, res) => {
       return res.status(403).json({ message: 'Not authorized to delete this post' });
     }
 
-    // Get the resource type and ID before deleting
     let resourceId: string | null = null;
     let resourceType: string = '';
     
@@ -265,12 +260,8 @@ router.delete('/:id', verifyToken, async (req: any, res) => {
     }
 
     if (post.type === 'note' && post.noteId) {
-
       const note = await Note.findById(post.noteId);
-
       if (note) {
-
-        // delete uploaded file
         if (note.fileUrl) {
           const filePath = path.join(__dirname, '../..', note.fileUrl);
 
@@ -278,15 +269,13 @@ router.delete('/:id', verifyToken, async (req: any, res) => {
             fs.unlinkSync(filePath);
           }
         }
-
-        // delete note document
         await Note.deleteOne({ _id: note._id });
       }
     }
     // Delete the community post
     await CommunityPost.deleteOne({ _id: post._id });
 
-    // Optionally make the resource private again (only if admin is deleting)
+    //make the resource private again (only if admin is deleting)
     if (isAdmin && resourceId) {
       switch (resourceType) {
         case 'quiz':
@@ -321,13 +310,6 @@ router.post('/:id/like', verifyToken, async (req: any, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    // Check if user already liked (prevent duplicate)
-    if (post.upvotedBy.includes(req.userId)) {
-      return res.status(400).json({ message: 'Already liked' });
-    }
-
-    // Add user to upvotedBy
-    post.upvotedBy.push(req.userId);
     post.upvotes += 1;
     await post.save();
 

@@ -3,10 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; 
 import { 
   Heart, 
   MessageCircle, 
@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { api, Feedback } from "@/utils/api";
 import type { CommunityPost, User } from "@/types";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type CategoryType = "All" | "Quiz" | "Flashcards" | "Notes" | "Image Map";
 
@@ -65,6 +66,17 @@ const Community = () => {
   const [shareDescription, setShareDescription] = useState("");
   const [sharing, setSharing] = useState(false);
 
+  // ✅ NEW: Search and Sort state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sortBy, setSortBy] = useState("latest");
+
+  // ✅ NEW: Debounce effect (Waits 500ms after user stops typing before searching)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // ✅ NEW: Feedback state
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
@@ -96,7 +108,12 @@ const Community = () => {
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.getCommunityPosts(selectedCategory === "All" ? undefined : selectedCategory);
+      // ✅ Pass the new parameters to the API
+      const response = await api.getCommunityPosts(
+        selectedCategory === "All" ? undefined : selectedCategory,
+        debouncedSearch,
+        sortBy
+      );
       const fetchedPosts: CommunityPost[] = response.posts;
       setPosts(fetchedPosts);
 
@@ -122,7 +139,7 @@ const Community = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, toast]);
+  }, [selectedCategory, debouncedSearch, sortBy, toast]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -246,15 +263,20 @@ const Community = () => {
     if (!shareTitle || (!shareFile && !shareContent)) return;
     setSharing(true);
     try {
-      const createResponse = await api.createNote({
+      // 1. This hits your backend /create route
+      // The backend will save the Note AND automatically create the CommunityPost
+      await api.createNote({
         title: shareTitle, content: shareContent, tags: shareTags
       }, shareFile || undefined);
 
-      if (createResponse.note && createResponse.note.id) {
-        await api.shareNote(createResponse.note.id);
-      }
+      // 2. We no longer need to call api.shareNote() here! 
+      
+      // 3. Just show success and refresh the feed
       toast({ title: "Success!", description: "Notes shared with the community" });
-      setShareFile(null); setShareTitle(""); setShareContent(""); setIsShareOpen(false);
+      setShareFile(null); 
+      setShareTitle(""); 
+      setShareContent(""); 
+      setIsShareOpen(false);
       fetchPosts();
     } catch (err: unknown) {
       toast({ title: "Error", description: "Failed to share", variant: "destructive" });
@@ -355,9 +377,28 @@ const Community = () => {
             </div>
           </div>
 
-          <div className="relative mb-6 md:mb-8 max-w-2xl">
-            <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input placeholder="Search community resources..." className="pl-11 h-12 bg-card border-border shadow-sm text-base" />
+          {/* ✅ UPDATED: Search and Sort Bar */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6 md:mb-8 max-w-3xl">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input 
+                placeholder="Search resources, topics, or notes..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-11 h-12 bg-card border-border shadow-sm text-base" 
+              />
+            </div>
+            <div className="sm:w-48">
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="h-12 bg-card border-border shadow-sm">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="latest">Latest First</SelectItem>
+                  <SelectItem value="popular">Most Popular</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex flex-col lg:flex-row gap-8">

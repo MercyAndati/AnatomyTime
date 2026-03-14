@@ -1,4 +1,3 @@
-// backend/src/routes/note.routes.ts
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
@@ -10,7 +9,6 @@ import User from '../models/User';
 
 const router = express.Router();
 
-// Configure multer for note file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../../uploads/notes');
@@ -69,7 +67,6 @@ router.post('/create', verifyToken, upload.single('file'), async (req: any, res)
   try {
     const { title, content, tags } = req.body;
     
-    // Validation - require title AND (either file OR content)
     if (!title) {
       return res.status(400).json({ 
         message: 'Title is required' 
@@ -82,15 +79,14 @@ router.post('/create', verifyToken, upload.single('file'), async (req: any, res)
       });
     }
 
-    // Create the note - content can be empty if file is provided
     const note = new Note({
       title,
-      content: content || '', // Empty string if no content
+      content: content || '',
       fileUrl: req.file ? `/uploads/notes/${req.file.filename}` : undefined,
       fileType: req.file ? req.file.mimetype : undefined,
       createdBy: req.userId,
       tags: tags ? tags.split(',').map((t: string) => t.trim()) : [],
-      isPublic: true // Auto-share to community
+      isPublic: true
     });
 
     await note.save();
@@ -101,7 +97,7 @@ router.post('/create', verifyToken, upload.single('file'), async (req: any, res)
       content: note.content.substring(0, 200) + (note.content.length > 200 ? '...' : ''),
       type: 'note',
       sharedBy: req.userId,
-      noteId: note._id, // Store reference to the note!
+      noteId: note._id,
     });
 
     await communityPost.save();
@@ -159,58 +155,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-
-// Share note to community
-router.post('/:id/share', verifyToken, async (req: any, res) => {
-  try {
-    const note = await Note.findById(req.params.id);
-    if (!note) {
-      return res.status(404).json({ message: 'Note not found' });
-    }
-
-    if (note.createdBy.toString() !== req.userId) {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
-
-    // Check if already shared (by looking for a post with this noteId)
-    const existingPost = await CommunityPost.findOne({ 
-      type: 'note',
-      noteId: note._id  // ← Add this to your CommunityPost schema!
-    });
-
-    if (existingPost) {
-      return res.status(200).json({ 
-        message: 'Already shared to community',
-        alreadyShared: true
-      });
-    }
-
-    // Create community post with noteId reference
-    const post = new CommunityPost({
-      title: note.title,
-      content: note.content.substring(0, 200) + (note.content.length > 200 ? '...' : ''),
-      type: 'note',
-      sharedBy: req.userId,
-      noteId: note._id,  // ← ADD THIS - Store reference to the note!
-    });
-
-    await post.save();
-
-    // Make note public
-    note.isPublic = true;
-    await note.save();
-
-    res.status(201).json({ 
-      message: 'Shared to community successfully',
-      post 
-    });
-
-  } catch (error) {
-    console.error('Share note error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
 // Serve note files with correct content type
 router.get('/file/:filename', async (req, res) => {
   try {
@@ -222,7 +166,6 @@ router.get('/file/:filename', async (req, res) => {
       return res.status(404).json({ message: 'File not found' });
     }
 
-    // Get file extension
     const ext = path.extname(filename).toLowerCase();
     
     // Set correct content type based on file extension
@@ -238,10 +181,9 @@ router.get('/file/:filename', async (req, res) => {
 
     const contentType = mimeTypes[ext] || 'application/octet-stream';
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', 'inline'); // Show in browser, not download
+    res.setHeader('Content-Disposition', 'inline');
     res.setHeader('X-Frame-Options', 'ALLOWALL');
     
-    // Send the file
     res.sendFile(filePath);
   } catch (error) {
     console.error('Error serving file:', error);
