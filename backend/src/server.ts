@@ -120,7 +120,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Database connection with retry logic
 const connectDB = async (retries = 5) => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/anatomyai');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/anatomytime');
     console.log('✅ Connected to MongoDB');
   } catch (err) {
     console.error('MongoDB connection error:', err);

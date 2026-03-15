@@ -27,7 +27,7 @@ router.post('/signup', async (req, res) => {
     // Create token
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET || 'secret',
+      process.env.JWT_SECRET as string,
       { expiresIn: '7d' }
     );
 
@@ -65,7 +65,7 @@ router.post('/login', async (req, res) => {
     // Create token
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET || 'secret',
+      process.env.JWT_SECRET as string,
       { expiresIn: '7d' }
     );
 
@@ -92,7 +92,7 @@ router.get('/me', async (req, res) => {
       return res.status(401).json({ message: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
     const user = await User.findById(decoded.userId).select('-password');
     
     if (!user) {

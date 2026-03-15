@@ -106,7 +106,7 @@ const Auth = () => {
               <Brain className="h-8 w-8 text-primary" />
             </div>
             <h1 className="text-3xl font-bold mb-2">
-              {isLogin ? "Welcome Back" : "Join AnatomyAI"}
+              {isLogin ? "Welcome Back" : "Join AnatomyTime"}
             </h1>
             <p className="text-muted-foreground">
               {isLogin

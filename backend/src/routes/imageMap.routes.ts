@@ -15,7 +15,7 @@ const verifyToken = (req: any, res: any, next: any) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
     req.userId = (decoded as any).userId;
     next();
   } catch (error) {
@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token) {
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
         const userId = (decoded as any).userId;
         query = {
           $or: [

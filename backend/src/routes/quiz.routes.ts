@@ -53,7 +53,7 @@ const verifyToken = (req: any, res: any, next: any) => {
     return res.status(401).json({ message: 'No token provided' });
   }
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
     req.userId = decoded.userId;
     next();
   } catch (error) {
@@ -324,7 +324,7 @@ router.get('/', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token) {
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
         query = {
           $or: [
             { isPublic: true },
@@ -394,7 +394,7 @@ router.get('/:id', async (req, res) => {
     
     if (token) {
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
         userId = decoded.userId;
         
         const attemptExists = await QuizAttempt.exists({

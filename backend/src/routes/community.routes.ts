@@ -20,7 +20,7 @@ const verifyToken = (req: any, res: any, next: any) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
     req.userId = decoded.userId;
     next();
   } catch (error) {

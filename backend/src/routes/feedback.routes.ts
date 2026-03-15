@@ -13,7 +13,7 @@ const verifyToken = async (req: any, res: any, next: any) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
     req.userId = (decoded as any).userId;
     
     // Safely get the User model to fetch their name and admin status

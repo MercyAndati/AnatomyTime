@@ -133,7 +133,7 @@ export function Navigation() {
                 <SheetHeader className="px-6 pt-6 pb-4 border-b">
                   <SheetTitle className="flex items-center gap-3">
                     <Brain className="h-7 w-7 text-primary" />
-                    <span className="text-xl font-bold">AnatomyAI</span>
+                    <span className="text-xl font-bold">AnatomyTime</span>
                   </SheetTitle>
                   <p className="text-sm text-muted-foreground">
                     Explore anatomy learning tools
@@ -204,7 +204,7 @@ export function Navigation() {
               className="flex items-center gap-2 text-xl font-bold text-primary hover:text-primary-glow transition-colors"
             >
               <Brain className="h-7 w-7" />
-              <span className="hidden sm:inline">AnatomyAI</span>
+              <span className="hidden sm:inline">AnatomyTime</span>
               <span className="sm:hidden">AA</span>
             </NavLink>
           </div>
