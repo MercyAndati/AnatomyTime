@@ -42,7 +42,6 @@ export const ViewNote = () => {
       setNote(data);
       
       if (data.fileUrl) {
-        // ✅ NEW: Just use the Cloudinary URL directly!
         setFileUrl(data.fileUrl);
 
         // If it's a text file, fetch the content from Cloudinary to display natively
@@ -77,7 +76,7 @@ export const ViewNote = () => {
     
     try {
       if (note.fileUrl) {
-        // ✅ NEW: Open the Cloudinary file securely in a new tab
+        //Open the Cloudinary file securely in a new tab
         window.open(note.fileUrl, '_blank', 'noopener,noreferrer');
         
         toast({

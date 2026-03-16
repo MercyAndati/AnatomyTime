@@ -96,7 +96,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create image map quiz (protected)
+// Create image map quiz
 router.post('/', verifyToken, async (req: any, res: any) => {
   try {
     const { title, description, svgData, regions, difficulty, category, tags } = req.body;
@@ -120,7 +120,7 @@ router.post('/', verifyToken, async (req: any, res: any) => {
   }
 });
 
-// Submit quiz attempt - UPDATED FOR NEW SCHEMA
+// Submit quiz attempt
 router.post('/:id/attempt', verifyToken, async (req: any, res: any) => {
   try {
     const { answers, timeSpent } = req.body;
@@ -131,7 +131,6 @@ router.post('/:id/attempt', verifyToken, async (req: any, res: any) => {
       return res.status(404).json({ message: 'Quiz not found' });
     }
 
-    // Calculate score
     let correctCount = 0;
     let totalPoints = 0;
     const gradedAnswers = answers.map((answer: any) => {
@@ -157,7 +156,6 @@ router.post('/:id/attempt', verifyToken, async (req: any, res: any) => {
     const score = correctCount;
     const percentage = totalPoints > 0 ? Math.round((score / totalPoints) * 100) : 0;
 
-    // Save attempt
     const attempt = new QuizAttempt({
       user: req.userId,
       quizRef: quizId,
@@ -172,7 +170,6 @@ router.post('/:id/attempt', verifyToken, async (req: any, res: any) => {
 
     await attempt.save();
 
-    // Update quiz stats
     quiz.plays += 1;
     quiz.avgScore = (quiz.avgScore * (quiz.plays - 1) + percentage) / quiz.plays;
     await quiz.save();
@@ -207,7 +204,7 @@ router.delete('/:id', verifyToken, async (req: any, res: any) => {
       }
     }
 
-    //Cloudinary deletion with logging
+    //Cloudinary deletion
     const deleteFromCloudinary = async (url: string) => {
       if (!url || !url.includes('cloudinary.com')) return;
       try {

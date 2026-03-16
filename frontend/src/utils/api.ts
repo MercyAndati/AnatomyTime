@@ -12,10 +12,9 @@ import {
   Note
 } from '@/types';
 
-// ✅ NEW: Feedback Type
 export interface Feedback {
   _id: string;
-  userId: string; // ✅ ADDED: Need this to check ownership
+  userId: string; 
   title: string;
   message: string;
   authorName: string;
@@ -335,7 +334,7 @@ class ApiClient {
     });
   }
 
-  // ✅ NEW: Feedback endpoints
+  //Feedback endpoints
   async submitFeedback(data: { title: string; message: string; isPublic: boolean }): Promise<{ message: string }> {
     return this.request<{ message: string }>('/feedback', {
       method: 'POST',

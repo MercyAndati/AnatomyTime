@@ -1,4 +1,3 @@
-// backend/src/routes/admin.routes.ts
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
@@ -8,10 +7,10 @@ import { imageMapStorage, cloudinary } from '../config/cloudinary';
 
 const router = express.Router();
 
-// ✅ NEW: Configure multer to use Cloudinary
+//Configure multer to use Cloudinary
 const upload = multer({ 
   storage: imageMapStorage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 // Middleware to verify token
@@ -70,12 +69,12 @@ router.post('/create-quiz', verifyToken, upload.fields([
       return res.status(400).json({ error: 'At least one region is required' });
     }
     
-    // ✅ NEW: Save the Cloudinary URLs directly to the database
+    // Save the Cloudinary URLs directly to the database
     const quiz = new ImageMapQuiz({
       title,
       description,
-      imageUrl: req.files['unlabeledImage'][0].path,         // Cloudinary URL
-      labeledImageUrl: req.files['labeledImage'][0].path,    // Cloudinary URL
+      imageUrl: req.files['unlabeledImage'][0].path,         
+      labeledImageUrl: req.files['labeledImage'][0].path,   
       regions: parsedRegions,
       difficulty: difficulty || 'standard',
       category: category || 'Anatomy',
@@ -95,7 +94,7 @@ router.post('/create-quiz', verifyToken, upload.fields([
   }
 });
 
-// Delete quiz (admin only) - deletes quiz and uploaded files
+// Delete quiz and uploaded files
 router.delete('/quiz/:id', verifyToken, verifyAdmin, async (req: any, res) => {
   try {
     const quizId = req.params.id;
@@ -103,14 +102,12 @@ router.delete('/quiz/:id', verifyToken, verifyAdmin, async (req: any, res) => {
     
     if (!quiz) return res.status(404).json({ error: 'Quiz not found' });
     
-    // ✅ NEW: Delete images from Cloudinary
     const deleteFromCloudinary = async (url: string) => {
       if (!url || !url.includes('cloudinary.com')) return;
       try {
         const urlParts = url.split('/');
         const folderIndex = urlParts.findIndex(part => part === 'anatomytime');
         if (folderIndex !== -1) {
-          // For images, we don't include the file extension in the public_id
           let publicId = urlParts.slice(folderIndex).join('/');
           if (publicId.includes('.')) {
             publicId = publicId.substring(0, publicId.lastIndexOf('.'));

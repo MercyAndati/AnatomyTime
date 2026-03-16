@@ -140,7 +140,6 @@ router.delete('/:id', verifyToken, async (req: any, res) => {
     if (note.fileUrl) {
       try {
         // Extract the public_id from the Cloudinary URL
-        // Example URL: https://res.cloudinary.com/demo/raw/upload/v1234/anatomytime/notes/note-123.pdf
         const urlParts = note.fileUrl.split('/');
         const folderIndex = urlParts.findIndex(part => part === 'anatomytime');
         if (folderIndex !== -1) {

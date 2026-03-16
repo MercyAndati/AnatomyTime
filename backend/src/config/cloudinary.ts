@@ -17,7 +17,6 @@ export { cloudinary };
 export const noteStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async (req, file) => {
-    // Cloudinary needs to know if it's a raw file (PDF/Doc) or an image
     const isImage = file.mimetype.startsWith('image/');
     return {
       folder: 'anatomytime/notes',

@@ -77,7 +77,7 @@ const ImageMapQuiz = () => {
   // Interaction State
   const [isTransitioning, setIsTransitioning] = useState(false);
   
-  // ✅ NEW: Full Screen Image Modal State
+  //Full Screen Image Modal State
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [imageZoom, setImageZoom] = useState(1);
 
@@ -374,7 +374,7 @@ const ImageMapQuiz = () => {
     }
   };
 
-  // ✅ NEW: Reusable Component for the Full Screen Image Modal
+  // Reusable Component for the Full Screen Image Modal
   const renderFullScreenModal = () => {
     if (!isImageModalOpen || !selectedQuiz) return null;
 
@@ -585,7 +585,7 @@ const ImageMapQuiz = () => {
                 </p>
               </div>
 
-              {/* ✅ NEW: Clickable Labeled Image for Review Mode */}
+              {/*Clickable Labeled Image for Review Mode */}
               <div 
                 className="mt-2 md:mt-4 relative group cursor-pointer overflow-hidden rounded-lg border-2 border-primary/20 bg-muted/10"
                 onClick={() => setIsImageModalOpen(true)}
@@ -961,7 +961,7 @@ const ImageMapQuiz = () => {
                 </p>
               </div>
 
-              {/* ✅ NEW: Clickable Labeled Image for Results Page */}
+              {/* Clickable Labeled Image for Results Page */}
               <div 
                 className="mt-2 md:mt-4 relative group cursor-pointer max-w-lg mx-auto overflow-hidden rounded-lg border-2 border-primary/20 bg-muted/10"
                 onClick={() => setIsImageModalOpen(true)}

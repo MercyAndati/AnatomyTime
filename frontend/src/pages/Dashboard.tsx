@@ -56,7 +56,7 @@ export const Dashboard = () => {
       const flashcardsRes = await api.getMyFlashcards();
       setFlashcards(flashcardsRes.sets);
       
-      // 3. Fetch Quiz Attempts (✅ NEW)
+      // 3. Fetch Quiz Attempts
       const attemptsRes = await api.getMyAttempts();
       const userAttempts = attemptsRes.attempts || [];
       setAttempts(userAttempts);

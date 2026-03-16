@@ -1,4 +1,3 @@
-// backend/src/server.ts
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
@@ -7,8 +6,6 @@ import path from 'path';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
-
-// Routes
 import authRoutes from './routes/auth.routes';
 import quizRoutes from './routes/quiz.routes';
 import imageMapRoutes from './routes/imageMap.routes';
@@ -16,15 +13,12 @@ import flashcardRoutes from './routes/flashcard.routes';
 import communityRoutes from './routes/community.routes';
 import adminRoutes from './routes/admin.routes';
 import noteRoutes from './routes/note.routes';
-import feedbackRoutes from './routes/feedback.routes'; // ✅ NEW: Imported Feedback
-
-// Services
+import feedbackRoutes from './routes/feedback.routes'; 
 import { AIService } from './services/ai.service';
 
 dotenv.config();
 
 const app = express();
-// ✅ NEW: Tell Express to trust Render's reverse proxy for rate-limiting
 app.set('trust proxy', 1);
 
 app.use((req, res, next) => {
@@ -46,19 +40,17 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Compression
 app.use(compression());
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000, 
   max: 100, // Limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.'
 });
 
 app.use('/api/', limiter);
 
-// CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? process.env.FRONTEND_URL 
@@ -74,7 +66,6 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // Initialize services and attach to app
 app.locals.aiService = new AIService(); 
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/image-map', imageMapRoutes);
@@ -82,7 +73,7 @@ app.use('/api/flashcards', flashcardRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notes', noteRoutes);
-app.use('/api/feedback', feedbackRoutes); // ✅ NEW: Mounted Feedback Route
+app.use('/api/feedback', feedbackRoutes); 
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

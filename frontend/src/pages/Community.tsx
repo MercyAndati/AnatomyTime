@@ -65,19 +65,17 @@ const Community = () => {
   const [shareTags, setShareTags] = useState("");
   const [shareDescription, setShareDescription] = useState("");
   const [sharing, setSharing] = useState(false);
-
-  // ✅ NEW: Search and Sort state
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState("latest");
 
-  // ✅ NEW: Debounce effect (Waits 500ms after user stops typing before searching)
+  //Debounce effect (Waits 500ms after user stops typing before searching)
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // ✅ NEW: Feedback state
+  //Feedback state
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [fbTitle, setFbTitle] = useState("");
@@ -159,7 +157,7 @@ const Community = () => {
     fetchPosts();
   }, [fetchPosts]);
 
-  // ✅ NEW: Load Feedbacks
+  // Load Feedbacks
   const loadFeedbacks = async () => {
     try {
       const data = await api.getFeedbacks();
@@ -192,7 +190,7 @@ const Community = () => {
     }
   };
 
-  // ✅ NEW: Delete Feedback
+  // Delete Feedback
   const handleDeleteFeedback = async (id: string) => {
     if (!confirm("Are you sure you want to delete this feedback?")) return;
     try {
@@ -293,7 +291,7 @@ const Community = () => {
             </div>
 
             <div className="flex gap-3">
-              {/* ✅ NEW: Feedback Button (Mobile visible too, but we will add to scroll list) */}
+              {/* Feedback Button (Mobile visible too, but we will add to scroll list) */}
               <Button 
                 variant="outline" 
                 className="h-11 px-4 shadow-sm border-primary/20 text-primary hidden md:flex"
@@ -516,7 +514,7 @@ const Community = () => {
         </div>
       </div>
 
-      {/* ✅ NEW: Feedback Modal */}
+      {/* Feedback Modal */}
       <Dialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen}>
         <DialogContent className="sm:max-w-[600px] h-[80vh] flex flex-col p-0 overflow-hidden">
           <div className="px-6 pt-6 pb-2 border-b border-border">
