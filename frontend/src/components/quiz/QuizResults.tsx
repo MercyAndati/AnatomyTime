@@ -1,4 +1,3 @@
-// frontend/src/components/quiz/QuizResults.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -57,8 +56,6 @@ export const QuizResults = ({
   };
 
   const handleSave = () => {
-    // Quiz is already saved in DB when generated
-    // Just show confirmation
     toast({
       title: "Saved to Dashboard",
       description: "This quiz has been added to your dashboard",

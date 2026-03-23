@@ -20,7 +20,7 @@ const Quiz = () => {
   const [questionType, setQuestionType] = useState("mixed");
   
   const [file, setFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null); // ✅ Re-introduced inline error state
+  const [fileError, setFileError] = useState<string | null>(null); 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const requiresFocusTopic = file ? file.size > 10 * 1024 * 1024 : false;
@@ -39,14 +39,14 @@ const Quiz = () => {
     }
 
     setFile(selectedFile);
-    setFileError(null); // ✅ Clear any previous errors
+    setFileError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const removeFile = () => {
     setFile(null);
     setFocusTopic("");
-    setFileError(null); // ✅ Clear errors on removal
+    setFileError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -94,7 +94,7 @@ const Quiz = () => {
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : "Failed to generate quiz";
       
-      // ✅ If there's a file, push the error to the UI box instead of a toast
+      // If there's a file, push the error to the UI box instead of a toast
       if (file) {
         setFileError(errMsg);
       } else {
@@ -109,7 +109,7 @@ const Quiz = () => {
     }
   };
 
-    // ✅ Check if the number of questions is valid
+    // Check if the number of questions is valid
   const parsedNum = parseInt(numQuestions);
   const isNumInvalid = isNaN(parsedNum) || parsedNum < 1 || parsedNum > 50;
 
@@ -118,7 +118,7 @@ const Quiz = () => {
     (!description && !file) || 
     (requiresFocusTopic && !focusTopic.trim()) ||
     !!fileError ||
-    isNumInvalid; // ✅ Instantly disable button if number is out of bounds
+    isNumInvalid; //Instantly disable button if number is out of bounds
 
   return (
     <div className="min-h-screen pb-20">
@@ -169,8 +169,7 @@ const Quiz = () => {
                   </Button>
                 </div>
 
-                {/* ✅ Graceful Inline Error Display */}
-                {/* ✅ Smart Inline Error Display */}
+                {/* Inline Error Display */}
                 {fileError && (
                   <div className="bg-destructive/10 text-destructive p-4 rounded-md text-sm border border-destructive/20 flex flex-col gap-2">
                     <div className="flex items-start gap-2 font-semibold">
@@ -286,7 +285,7 @@ const Quiz = () => {
                   onChange={(e) => setNumQuestions(e.target.value)}
                   className={`mt-1 ${isNumInvalid ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 />
-                {/* ✅ Inline error message */}
+                {/*Inline error message */}
                 {isNumInvalid && (
                   <p className="text-xs text-destructive mt-1 font-medium">
                     Please enter a number between 1 and 50.

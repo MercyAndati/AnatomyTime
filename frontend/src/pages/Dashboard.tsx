@@ -1,20 +1,10 @@
-// frontend/src/pages/Dashboard.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Brain, 
-  FileText, 
-  Clock, 
-  Trash2, 
-  RotateCcw,
-  Sparkles,
-  BookOpen,
-  BarChart 
-} from "lucide-react";
+import { Brain, FileText, Clock, Trash2, RotateCcw,Sparkles,BookOpen,BarChart } from "lucide-react";
 import { api } from "@/utils/api";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,24 +38,24 @@ export const Dashboard = () => {
   const loadUserData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch Quizzes
+      // Fetch Quizzes
       const quizzesRes = await api.getMyQuizzes();
       setQuizzes(quizzesRes.quizzes);
       
-      // 2. Fetch Flashcards
+      // Fetch Flashcards
       const flashcardsRes = await api.getMyFlashcards();
       setFlashcards(flashcardsRes.sets);
       
-      // 3. Fetch Quiz Attempts
+      // Fetch Quiz Attempts
       const attemptsRes = await api.getMyAttempts();
       const userAttempts = attemptsRes.attempts || [];
       setAttempts(userAttempts);
       
-      // 4. Calculate Stats
+      // Calculate Stats
       const totalQuizzes = quizzesRes.quizzes.length;
       const totalFlashcards = flashcardsRes.sets.length;
-      
       const attemptCount = userAttempts.length;
+
       // Calculate sum of all percentages
       const totalScoreSum = userAttempts.reduce((sum, attempt) => sum + (attempt.percentage || 0), 0);
       
@@ -191,7 +181,7 @@ export const Dashboard = () => {
 
         {/* Content Tabs */}
         <Tabs defaultValue="quizzes" className="space-y-4">
-          {/* ✅ FIXED: Mobile optimized TabsList (wrapping allowed) */}
+          {/*flex wrap for mobile*/}
           <TabsList className="w-full h-auto flex-wrap justify-start p-1 gap-1">
             <TabsTrigger value="quizzes" className="flex-1 sm:flex-none">My Quizzes</TabsTrigger>
             <TabsTrigger value="flashcards" className="flex-1 sm:flex-none">My Flashcards</TabsTrigger>
@@ -211,11 +201,9 @@ export const Dashboard = () => {
               <div className="grid gap-3 sm:gap-4">
                 {quizzes.map((quiz) => (
                   <Card key={quiz.id} className="p-4">
-                    {/* ✅ FIXED: Responsive flex-col to flex-row */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0"> {/* min-w-0 required for truncate */}
+                      <div className="flex-1 min-w-0"> 
                         <h3 className="font-semibold mb-1 truncate text-base sm:text-lg">{quiz.title}</h3>
-                        {/* ✅ FIXED: Flex-wrap for metadata */}
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-muted-foreground">
                           <span>{quiz.questions.length} Qs</span>
                           <span className="hidden sm:inline">•</span>
@@ -254,7 +242,6 @@ export const Dashboard = () => {
               <div className="grid gap-3 sm:gap-4">
                 {flashcards.map((set) => (
                   <Card key={set.id || Math.random()} className="p-4">
-                    {/* ✅ FIXED: Responsive flex layout */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold mb-1 truncate text-base sm:text-lg">{set.title}</h3>

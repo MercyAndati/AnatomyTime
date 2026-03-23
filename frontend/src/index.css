@@ -2,11 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* PROFESSIONAL DESIGN SYSTEM (Render / Google AI Studio Inspired)
-  Focuses on true neutrals (blacks/whites/greys) for structure, 
-  and preserves the signature blue for high-contrast accents.
-*/
-
 @layer base {
   :root {
     /* Pure white background for light mode */
@@ -20,11 +15,11 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
 
-    /* Signature Blue (Kept from original) */
+    /*Blue*/
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
     
-    /* Reduced glow intensity */
+    /*glow intensity */
     --primary-glow: 217 91% 60%;
 
     --secondary: 240 4.8% 95.9%;
@@ -47,10 +42,10 @@
     --input: 240 5.9% 70%;
     --ring: 217 91% 60%;
 
-    /* TIGHTER CORNERS for professional feel (was 1rem) */
+    /* TIGHTER CORNERS */
     --radius: 0.5rem;
     
-    /* Redefined Glass/Surface variables (Less glow, more structure) */
+    /* Glass/Surface variables */
     --glass-bg: 0 0% 100% / 0.9;
     --glass-border: 240 5.9% 65%;
     --glass-shadow: 240 5.9% 10% / 0.05;
@@ -60,11 +55,11 @@
   }
 
   .dark {
-    /* Deep charcoal/black for dark mode (Google AI Studio style) */
+    /* Deep charcoal/black */
     --background: 0 0% 0%; 
     --foreground: 0 0% 99%;
 
-    /* Slightly lighter grey for floating cards (Render style) */
+    /* Slightly lighter grey for floating cards*/
     --card: 0 0% 5%; 
     --card-foreground: 0 0% 98%;
 
@@ -97,7 +92,7 @@
     --input: 0 0% 15%;
     --ring: 217 91% 60%;
     
-    /* Redefined Glass/Surface variables for Dark Mode */
+    /* Glass/Surface variables for Dark Mode */
     --glass-bg: 0 0% 9% / 0.8;
     --glass-border: 0 0% 40%;
     --glass-shadow: 0 0% 0% / 0.5;
@@ -119,9 +114,6 @@
 }
 
 @layer utilities {
-  /* Refactored 'glass' to act as a professional 'Surface' layer 
-    instead of a blurry glowing bubble. 
-  */
   .glass {
     background: hsl(var(--glass-bg));
     backdrop-filter: blur(8px);
@@ -139,7 +131,7 @@
     background-image: url("data:image/svg+xml,%3Csvg width='28' height='49' viewBox='0 0 28 49' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23808080' fill-opacity='0.15' fill-rule='evenodd'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/svg%3E");
   }
   
-  /* Replaced floating hover effect with a sleek border highlight */
+  /*border highlight */
   .glass-card:hover {
     border-color: hsl(var(--primary) / 0.5);
     box-shadow: 0 8px 24px 0 hsl(var(--glass-shadow));

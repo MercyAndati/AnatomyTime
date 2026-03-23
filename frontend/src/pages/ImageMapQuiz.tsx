@@ -12,7 +12,6 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 
-// Define interfaces based on backend models
 interface Region {
   id: string;
   name: string;
@@ -41,7 +40,6 @@ interface Quiz {
   labeledImageUrl: string;
 }
 
-// Get backend URL from environment variable
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
 const ImageMapQuiz = () => {
@@ -112,7 +110,6 @@ const ImageMapQuiz = () => {
     return () => clearInterval(interval);
   }, [selectedQuiz, showResults, showReview, quizStartTime]);
 
-  // ✅ Helper to safely render both old local images and new Cloudinary images
   const getImageUrl = (url?: string) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
@@ -182,8 +179,8 @@ const ImageMapQuiz = () => {
     setClickedRegions({});
     setShowReview(false);
     setShowResults(false);
-    setIsImageModalOpen(false); // Reset modal
-    setImageZoom(1);            // Reset zoom
+    setIsImageModalOpen(false); 
+    setImageZoom(1);          
     setScore(0);
     setTotal(quiz.regions.length);
     setQuizStartTime(Date.now());
@@ -278,13 +275,11 @@ const ImageMapQuiz = () => {
     }
   };
 
-  // Reset quiz
   const resetQuiz = () => {
     if (!selectedQuiz) return;
     startQuiz(selectedQuiz);
   };
 
-  // Handle image load
   const handleImageLoad = () => {
     if (!imageRef.current) return;
     
@@ -374,7 +369,6 @@ const ImageMapQuiz = () => {
     }
   };
 
-  // Reusable Component for the Full Screen Image Modal
   const renderFullScreenModal = () => {
     if (!isImageModalOpen || !selectedQuiz) return null;
 
@@ -555,7 +549,7 @@ const ImageMapQuiz = () => {
     );
   }
 
-  // If quiz is completed and showing review
+  // quiz completed and showing review
   if (showReview) {
     return (
       <div className="min-h-screen pb-20">

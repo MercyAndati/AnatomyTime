@@ -1,4 +1,3 @@
-// frontend/src/components/flashcards/FlashcardSession.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -51,7 +50,7 @@ export const FlashcardSession = ({
   };
 
   const toggleMastered = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card from flipping when clicking mastered
+    e.stopPropagation(); 
     if (!currentCard) return;
     setMastered(prev => ({
       ...prev,
@@ -61,7 +60,7 @@ export const FlashcardSession = ({
 
   const masteredCount = Object.values(mastered).filter(Boolean).length;
 
-  // ✅ Helper to convert AI Markdown bold (**text**) into actual bold React text
+  //convert AI Markdown bold (**text**) into actual bold React text
   const formatText = (text?: string) => {
     if (!text) return null;
     // Splits the string by ** ** and maps it to normal or bold text
@@ -78,7 +77,6 @@ export const FlashcardSession = ({
     <div className="min-h-screen pb-20 overflow-x-hidden">
       <div className="container mx-auto px-4 pt-24 max-w-3xl">
         
-        {/* Header - ✅ FIXED: Responsive flex wrapping */}
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
             <h1 className="text-xl sm:text-2xl font-bold truncate pr-2">{title}</h1>
@@ -92,7 +90,7 @@ export const FlashcardSession = ({
           </div>
         </div>
 
-        {/* Flashcard - ✅ FIXED: Responsive padding and height */}
+        {/* Flashcard*/}
         <div 
           className="cursor-pointer perspective-1000 mb-8"
           onClick={() => setIsFlipped(!isFlipped)}
@@ -135,7 +133,7 @@ export const FlashcardSession = ({
           </div>
         </div>
 
-        {/* Navigation - ✅ FIXED: Wrap beautifully on small devices */}
+        {/* Navigation */}
         <div className="flex flex-wrap sm:flex-nowrap items-center justify-center sm:justify-between gap-3 w-full">
           <Button
             variant="outline"

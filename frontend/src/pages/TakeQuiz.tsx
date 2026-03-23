@@ -44,7 +44,7 @@ export const TakeQuiz = () => {
       const quizData = await api.getQuiz(id);
       setQuiz(quizData);
       
-      // Prepare questions for taking (remove correct answers)
+      // Prepare questions for taking
       const quizQuestions = quizData.questions.map(q => ({
         id: q.id,
         type: q.type,
@@ -85,7 +85,7 @@ export const TakeQuiz = () => {
         id!,
         answersArray,
         time,
-        !!quiz?.timeLimitMinutes // ✅ FIX 1: If it has a timer, treat it as a Rapid Quiz!
+        !!quiz?.timeLimitMinutes 
       );
 
       setAttemptResult(result);
@@ -96,7 +96,6 @@ export const TakeQuiz = () => {
         description: error instanceof Error ? error.message : "Failed to submit quiz",
         variant: "destructive",
       });
-      // ✅ FIX: Do NOT set state back to "taking". Send them safely back to the dashboard.
       navigate("/dashboard"); 
     }
   };
@@ -124,7 +123,6 @@ export const TakeQuiz = () => {
   };
 
   const handleSave = () => {
-    // Quiz is already in dashboard
     toast({
       title: "Already Saved",
       description: "This quiz is in your dashboard",
@@ -153,7 +151,7 @@ export const TakeQuiz = () => {
           questions={questions}
           title={quiz.title}
           timeLimitMinutes={quiz.timeLimitMinutes}
-          isRapid={!!quiz.timeLimitMinutes} // ✅ FIX 2: Trigger the timer UI
+          isRapid={!!quiz.timeLimitMinutes} 
           onComplete={handleQuizComplete}
         />
       </>

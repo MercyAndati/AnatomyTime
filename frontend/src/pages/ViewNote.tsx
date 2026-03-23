@@ -1,4 +1,3 @@
-// frontend/src/pages/ViewNote.tsx
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
@@ -8,8 +7,6 @@ import { Download, ArrowLeft, Calendar, User, Tag, FileText, File, ChevronLeft, 
 import { api } from "@/utils/api";
 import { toast } from "@/hooks/use-toast";
 import type { Note } from "@/types";
-
-// react-pdf imports
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -24,7 +21,6 @@ export const ViewNote = () => {
   const [note, setNote] = useState<Note | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   
-  // States for our native viewers
   const [textContent, setTextContent] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -84,7 +80,6 @@ export const ViewNote = () => {
           description: "Document opened in a new tab",
         });
       } else {
-        // Keep your existing logic for raw text notes that don't have a file attached
         const safeTitle = note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
         const blob = new Blob([note.content], { type: 'text/plain' });
         const url = window.URL.createObjectURL(blob);
@@ -116,7 +111,7 @@ export const ViewNote = () => {
     const fileType = note.fileType || '';
     const fileName = note.fileUrl.split('/').pop() || '';
 
-    // 1. Images
+    // Images
     if (fileType.includes('image')) {
       return (
         <div className="flex justify-center border rounded-lg p-4 bg-muted/10">
@@ -129,7 +124,7 @@ export const ViewNote = () => {
       );
     }
     
-    // 2. PDFs (Native Render via react-pdf)
+    // PDFs (Native Render via react-pdf)
     if (fileType.includes('pdf')) {
       return (
         <div className="flex flex-col items-center border rounded-lg bg-muted/10 p-4">
@@ -178,7 +173,7 @@ export const ViewNote = () => {
       );
     }
     
-    // 3. Text Files (Native Render)
+    // Text Files (Native Render)
     if (fileType.includes('text')) {
       return (
         <div className="border rounded-lg p-4 bg-muted/30">
@@ -197,7 +192,7 @@ export const ViewNote = () => {
       );
     }
     
-    // 4. Fallback (Word, PPT, Excel, etc.)
+    // Fallback (Word, PPT, Excel, etc.)
     return (
       <div className="text-center p-12 border rounded-lg bg-muted/20">
         <File className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />

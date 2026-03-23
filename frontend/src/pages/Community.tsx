@@ -7,25 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; 
-import { 
-  Heart, 
-  MessageCircle, 
-  Download, 
-  Search, 
-  Plus, 
-  FileText, 
-  Brain, 
-  Zap, 
-  Map, 
-  Eye, 
-  Play, 
-  Trash2, 
-  BookOpen,
-  Upload,
-  MessageSquare,
-  Lock,
-  Globe
-} from "lucide-react";
+import { Heart, MessageCircle, Download, Search, Plus, FileText, Brain, Zap, Map, Eye, Play, Trash2, BookOpen,Upload,MessageSquare,Lock,Globe} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { api, Feedback } from "@/utils/api";
@@ -69,7 +51,7 @@ const Community = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState("latest");
 
-  //Debounce effect (Waits 500ms after user stops typing before searching)
+  // Waits 500ms after user stops typing before searching
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500);
     return () => clearTimeout(timer);
@@ -106,7 +88,6 @@ const Community = () => {
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      // ✅ Pass the new parameters to the API
       const response = await api.getCommunityPosts(
         selectedCategory === "All" ? undefined : selectedCategory,
         debouncedSearch,
@@ -157,7 +138,6 @@ const Community = () => {
     fetchPosts();
   }, [fetchPosts]);
 
-  // Load Feedbacks
   const loadFeedbacks = async () => {
     try {
       const data = await api.getFeedbacks();
@@ -167,7 +147,7 @@ const Community = () => {
     }
   };
 
-  // Submit Feedback (with login check)
+  // Submit Feedback
   const handleFeedbackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
@@ -227,10 +207,9 @@ const Community = () => {
 
   const handleDownloadNote = async (noteId: string, title?: string) => {
     try {
-      const note = await api.getNote(noteId); // We still call this to increment the download counter!
+      const note = await api.getNote(noteId);
       if (!note.fileUrl) return;
       
-      // Since it's a Cloudinary URL, we can just open it directly
       window.open(note.fileUrl, '_blank', 'noopener,noreferrer');
       
     } catch {
@@ -251,15 +230,10 @@ const Community = () => {
     if (!shareTitle || (!shareFile && !shareContent)) return;
     setSharing(true);
     try {
-      // 1. This hits your backend /create route
-      // The backend will save the Note AND automatically create the CommunityPost
       await api.createNote({
         title: shareTitle, content: shareContent, tags: shareTags
       }, shareFile || undefined);
 
-      // 2. We no longer need to call api.shareNote() here! 
-      
-      // 3. Just show success and refresh the feed
       toast({ title: "Success!", description: "Notes shared with the community" });
       setShareFile(null); 
       setShareTitle(""); 
@@ -291,7 +265,7 @@ const Community = () => {
             </div>
 
             <div className="flex gap-3">
-              {/* Feedback Button (Mobile visible too, but we will add to scroll list) */}
+              {/* Feedback Button*/}
               <Button 
                 variant="outline" 
                 className="h-11 px-4 shadow-sm border-primary/20 text-primary hidden md:flex"
@@ -365,7 +339,7 @@ const Community = () => {
             </div>
           </div>
 
-          {/* ✅ UPDATED: Search and Sort Bar */}
+          {/* Search and Sort Bar */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6 md:mb-8 max-w-3xl">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -391,7 +365,7 @@ const Community = () => {
 
           <div className="flex flex-col lg:flex-row gap-8">
             
-            {/* 📱 MOBILE SCROLL MENU */}
+            {/*  MOBILE SCROLL MENU */}
             <div className="lg:hidden -mx-4 px-4 overflow-x-auto no-scrollbar flex gap-2 pb-2">
               <button
                 onClick={() => { setIsFeedbackOpen(true); loadFeedbacks(); }}
@@ -417,7 +391,7 @@ const Community = () => {
               })}
             </div>
 
-            {/* 💻 DESKTOP SIDEBAR */}
+            {/*  DESKTOP SIDEBAR */}
             <aside className="w-64 flex-shrink-0 hidden lg:block">
               <div className="glass-card sticky top-28 p-5">
                 <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 pl-2">Categories</h2>
@@ -556,7 +530,7 @@ const Community = () => {
                             {!fb.isPublic && <Lock className="h-3 w-3 text-muted-foreground" />}
                           </h4>
                           
-                          {/* ✅ Only shows if they are Admin or the Author */}
+                          {/* Only shows if they are Admin or the Author */}
                           {canDelete && (
                             <Button 
                               variant="ghost" 
@@ -641,7 +615,7 @@ const Community = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Preview Dialog (Unchanged Logic, Updated Styles) */}
+      {/* Preview Dialog */}
       <Dialog open={!!previewPost} onOpenChange={() => setPreviewPost(null)}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>

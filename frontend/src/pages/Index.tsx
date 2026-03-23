@@ -10,9 +10,9 @@ const Index = () => {
     <div className="min-h-screen bg-background selection:bg-primary/30">
       <Navigation />
       
-      {/* 🚀 HERO SECTION */}
+      {/*HERO SECTION */}
       <section className="pt-32 pb-10 px-4 overflow-hidden relative">
-        {/* Cellular Hexagon pattern for biological/medical feel */}
+        {/* Cellular Hexagon pattern */}
         <div className="absolute inset-0 bg-grid-hexagon [mask-image:radial-gradient(ellipse_100%_80%_at_50%_0%,#000_70%,transparent_100%)]"></div>
 
         <div className="container mx-auto max-w-6xl text-center relative z-10 animate-fade-in">
@@ -40,7 +40,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* 🍱 BENTO GRID FEATURES SECTION */}
+      {/* BENTO GRID FEATURES SECTION */}
       <section className="py-24 px-4 bg-muted/20 border-t border-border">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
@@ -132,7 +132,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* 🏁 BOTTOM CTA SECTION */}
+      {/* BOTTOM CTA SECTION */}
       <section className="py-24 px-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-primary/5"></div>
         <div className="container mx-auto max-w-4xl relative z-10">

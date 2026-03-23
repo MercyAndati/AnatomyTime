@@ -1,4 +1,3 @@
-// frontend/src/utils/api.ts
 import { 
   User, 
   Quiz, 
@@ -174,6 +173,10 @@ class ApiClient {
   async getAttempts(quizId: string): Promise<{ attempts: QuizAttempt[] }> {
     return this.request<{ attempts: QuizAttempt[] }>(`/quiz/attempts/${quizId}`);
   }
+  
+  async getMyAttempts(): Promise<{ attempts: QuizAttempt[] }> {
+    return this.request<{ attempts: QuizAttempt[] }>('/quiz/attempts/my-all'); 
+  }
 
   // Flashcard endpoints
   async generateFlashcards(data: {
@@ -220,10 +223,6 @@ class ApiClient {
     return this.request(`/flashcards/${setId}`, {
       method: 'DELETE',
     });
-  }
-
-  async getMyAttempts(): Promise<{ attempts: QuizAttempt[] }> {
-    return this.request<{ attempts: QuizAttempt[] }>('/quiz/attempts/my-all'); 
   }
 
   async validateFile(formData: FormData): Promise<{

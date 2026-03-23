@@ -1,4 +1,3 @@
-// frontend/src/types/index.ts
 export interface User {
   id: string;
   email: string;
@@ -71,15 +70,12 @@ export interface CommunityPost {
   title: string;
   author: string;
   authorId?: string;
-  // Backend community post type
-  // (matches CommunityPost.type field in backend)
   type: 'quiz_share' | 'flashcard_share' | 'image_map_share' | 'note';
   likes: number;
   comments: number;
   createdAt: string;
   description?: string;
   resourceId?: string;
-  // Additional stats populated from related resources
   questionCount?: number;
   downloads?: number;
   alreadyShared?: boolean;
@@ -104,7 +100,6 @@ export interface Note {
   updatedAt: string;
 }
 
-// API Response types
 export interface ApiResponse<T> {
   data?: T;
   message?: string;

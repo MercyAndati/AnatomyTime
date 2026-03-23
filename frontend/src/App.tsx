@@ -1,4 +1,3 @@
-// frontend/src/App.tsx
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -42,8 +41,7 @@ const App = () => (
             <Route path="/image-map/:id" element={<ImageMapQuiz />} />
             <Route path="/community" element={<Community />} />
             <Route path="/notes/:id" element={<ViewNote />} />
-            <Route
-              path="/admin"
+            <Route path="/admin"
               element={
                 <ProtectedRoute adminOnly>
                   <AdminWithPicker />

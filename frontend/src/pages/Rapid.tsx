@@ -170,7 +170,7 @@ const Rapid = () => {
                   </Button>
                 </div>
 
-                {/* ✅ Smart Inline Error Display */}
+                {/*Inline Error Display */}
                 {fileError && (
                   <div className="bg-destructive/10 text-destructive p-4 rounded-md text-sm border border-destructive/20 flex flex-col gap-2">
                     <div className="flex items-start gap-2 font-semibold">

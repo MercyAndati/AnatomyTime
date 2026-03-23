@@ -112,7 +112,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 const connectDB = async (retries = 5) => {
   try {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/anatomytime');
-    console.log('✅ Connected to MongoDB');
+    console.log('Connected to MongoDB');
   } catch (err) {
     console.error('MongoDB connection error:', err);
     if (retries > 0) {
@@ -129,8 +129,8 @@ connectDB();
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 export default app;

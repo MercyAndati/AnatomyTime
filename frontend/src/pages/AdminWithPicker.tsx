@@ -116,7 +116,7 @@ const AdminWithPicker = () => {
     const img = imageRef.current;
     if (!container || !img) return;
     
-    // Get click position relative to container (accounting for scroll)
+    // Get click position relative to container ,accounting for scroll
     const containerRect = container.getBoundingClientRect();
     const scrollX = container.scrollLeft;
     const scrollY = container.scrollTop;
@@ -125,8 +125,7 @@ const AdminWithPicker = () => {
     const clickX = e.clientX - containerRect.left + scrollX;
     const clickY = e.clientY - containerRect.top + scrollY;
     
-    // Convert to natural image coordinates
-    // The image is scaled by zoom, so we need to divide by zoom
+    // Convert to natural image coordinates: The image is scaled by zoom, so we need to divide by zoom
     const x = clickX / zoom;
     const y = clickY / zoom;
     
@@ -275,7 +274,6 @@ const AdminWithPicker = () => {
       return;
     }
     
-    // Debug: Log what we're sending
     console.log('Creating quiz with:', {
       title,
       regionsCount: regions.length,
@@ -305,7 +303,7 @@ const AdminWithPicker = () => {
     
     console.log('Test endpoint status:', testResponse.status);
     
-    // Make the actual request
+    //Actual request
     const response = await fetch(`${config.apiUrl}/admin/create-quiz`, {
       method: 'POST',
       headers: {
@@ -317,7 +315,6 @@ const AdminWithPicker = () => {
     
     console.log('Response status:', response.status);
     
-    // Try to get response text first to debug
     const responseText = await response.text();
     console.log('Response text:', responseText);
     
@@ -718,49 +715,49 @@ const AdminWithPicker = () => {
                         
                         {/* Region labels */}
                         {/* Region labels - small circles with hover tooltips */}
-<div className="absolute top-0 left-0" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
-  {regions.map((region, index) => {
-    const points = region.points.split(' ').map(p => {
-      const [x, y] = p.split(',').map(Number);
-      return { x, y };
-    });
-    
-    const centerX = (points[0].x + points[1].x) / 2;
-    const centerY = (points[0].y + points[2].y) / 2;
-    
-    return (
-      <div
-        key={index}
-        className="group relative"
-        style={{
-          position: 'absolute',
-          left: `${centerX}px`,
-          top: `${centerY}px`,
-          transform: 'translate(-50%, -50%)',
-        }}
-      >
-        {/* Small circle marker */}
-        <div
-          className="w-2 h-2 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center text-white text-xs font-bold shadow-lg cursor-pointer hover:bg-blue-700 transition-colors"
-          title={`${index + 1}. ${region.name}`}
-        >
-          {index + 1}
-        </div>
-        
-        {/* Tooltip on hover */}
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-50">
-          <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap shadow-lg">
-            <div className="font-semibold">{index + 1}. {region.name}</div>
-            {region.description && (
-              <div className="text-gray-300 mt-1 max-w-xs">{region.description}</div>
-            )}
-          </div>
-          <div className="w-2 h-2 bg-gray-900 transform rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
-        </div>
-      </div>
-    );
-  })}
-</div>
+                        <div className="absolute top-0 left-0" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
+                          {regions.map((region, index) => {
+                            const points = region.points.split(' ').map(p => {
+                              const [x, y] = p.split(',').map(Number);
+                              return { x, y };
+                            });
+                            
+                            const centerX = (points[0].x + points[1].x) / 2;
+                            const centerY = (points[0].y + points[2].y) / 2;
+                            
+                            return (
+                              <div
+                                key={index}
+                                className="group relative"
+                                style={{
+                                  position: 'absolute',
+                                  left: `${centerX}px`,
+                                  top: `${centerY}px`,
+                                  transform: 'translate(-50%, -50%)',
+                                }}
+                              >
+                                {/* Small circle marker */}
+                                <div
+                                  className="w-2 h-2 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center text-white text-xs font-bold shadow-lg cursor-pointer hover:bg-blue-700 transition-colors"
+                                  title={`${index + 1}. ${region.name}`}
+                                >
+                                  {index + 1}
+                                </div>
+                                
+                                {/* Tooltip on hover */}
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-50">
+                                  <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap shadow-lg">
+                                    <div className="font-semibold">{index + 1}. {region.name}</div>
+                                    {region.description && (
+                                      <div className="text-gray-300 mt-1 max-w-xs">{region.description}</div>
+                                    )}
+                                  </div>
+                                  <div className="w-2 h-2 bg-gray-900 transform rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                         
                         {/* Current region indicator - translucent circle */}
                         {currentRegion && (
@@ -773,7 +770,7 @@ const AdminWithPicker = () => {
                               height: `${currentRegion.height}px`,
                               transform: `scale(${zoom}) translate(-50%, -50%)`,
                               transformOrigin: 'top left',
-                              backgroundColor: 'rgba(239, 68, 68, 0.3)', // Translucent red
+                              backgroundColor: 'rgba(239, 68, 68, 0.3)',
                               borderColor: 'rgb(239, 68, 68)'
                             }}
                           />

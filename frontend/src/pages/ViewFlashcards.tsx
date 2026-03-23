@@ -1,4 +1,3 @@
-// frontend/src/pages/ViewFlashcards.tsx
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FlashcardSession } from "@/components/flashcards/FlashcardSession";
@@ -56,7 +55,6 @@ export const ViewFlashcards = () => {
   };
 
   const handleSave = () => {
-    // Flashcard set is already saved in dashboard
     toast({
       title: "Already Saved",
       description: "This flashcard set is in your dashboard",

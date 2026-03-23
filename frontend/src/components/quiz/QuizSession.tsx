@@ -35,13 +35,12 @@ export const QuizSession = ({
 
   // Use callback to prevent multiple triggers
   const handleTimeUp = useCallback(() => {
-    if (isSubmitting) return; // Prevent double submission
+    if (isSubmitting) return; 
     setIsSubmitting(true);
     const timeSpent = Math.floor((Date.now() - startTime) / 1000);
     onComplete(answers, timeSpent);
   }, [answers, onComplete, startTime, isSubmitting]);
 
-  // The actual countdown timer effect
   useEffect(() => {
     if (!timeLimitMinutes || !isRapid || isSubmitting) return;
 
@@ -49,7 +48,7 @@ export const QuizSession = ({
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleTimeUp(); // 🚨 AUTO SUBMIT WHEN CLOCK HITS 0
+          handleTimeUp(); 
           return 0;
         }
         return prev - 1;
@@ -123,7 +122,6 @@ export const QuizSession = ({
         {/* Quiz Title */}
         <h1 className="text-2xl font-bold mb-6">{title}</h1>
 
-        {/* 🚀 THE NEW RAPID UI DASHBOARD */}
         <div className="border rounded-xl p-6 bg-card mb-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm font-medium text-muted-foreground">

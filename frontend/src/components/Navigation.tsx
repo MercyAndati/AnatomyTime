@@ -1,4 +1,3 @@
-// frontend/src/components/Navigation.tsx
 import { useState, useEffect } from "react";
 import { Brain, FileText, Zap, Users, Map, Menu, User, LogOut, LayoutDashboard } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -32,7 +31,6 @@ export function Navigation() {
   const [user, setUser] = useState<UserType | null>(null);
 
   useEffect(() => {
-    // Check if user is logged in
     const checkUser = () => {
       const userData = localStorage.getItem('user');
       if (userData) {
@@ -48,12 +46,10 @@ export function Navigation() {
 
     checkUser();
 
-    // Listen for storage changes (when user logs in/out in another tab)
     const handleStorageChange = () => {
       checkUser();
     };
 
-    // Listen for custom login event (same tab)
     const handleLogin = () => {
       checkUser();
     };
@@ -65,13 +61,12 @@ export function Navigation() {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('userLogin', handleLogin);
     };
-  }, [location]); // Re-check when route changes (e.g., after login)
+  }, [location]); 
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    // Dispatch custom event for other components
     window.dispatchEvent(new Event('userLogout'));
     toast({
       title: "Logged out",
@@ -95,7 +90,6 @@ export function Navigation() {
     return 'U';
   };
 
-  // Base navigation links for all users
   const navLinks = [
     { to: "/quiz", icon: FileText, label: "Quiz" },
     { to: "/flashcards", icon: FileText, label: "Flashcards" },
