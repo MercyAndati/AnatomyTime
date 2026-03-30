@@ -4,7 +4,7 @@ import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain, FileText, Clock, Trash2, RotateCcw,Sparkles,BookOpen,BarChart } from "lucide-react";
+import { Brain, FileText, Clock, Zap, Trash2, RotateCcw,Sparkles,BookOpen,BarChart } from "lucide-react";
 import { api } from "@/utils/api";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -204,13 +204,31 @@ export const Dashboard = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex-1 min-w-0"> 
                         <h3 className="font-semibold mb-1 truncate text-base sm:text-lg">{quiz.title}</h3>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-muted-foreground">
-                          <span>{quiz.questions.length} Qs</span>
-                          <span className="hidden sm:inline">•</span>
-                          <span className="capitalize">{quiz.difficulty}</span>
-                          <span className="hidden sm:inline">•</span>
-                          <span>{new Date(quiz.createdAt).toLocaleDateString()}</span>
-                        </div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs sm:text-sm text-muted-foreground mt-1">
+                        <span className="flex items-center gap-1 font-medium bg-secondary/50 px-2 py-0.5 rounded-md">
+                          <FileText className="h-3 w-3" />
+                          {quiz.questions.length} Qs
+                        </span>
+                        
+                        <span className="capitalize">{quiz.difficulty}</span>
+                        <span className="hidden sm:inline">•</span>
+                        
+                        {/* The New Rapid / Standard Indicator */}
+                        {quiz.timeLimitMinutes ? (
+                          <span className="flex items-center gap-1 text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-md font-medium border border-amber-500/20">
+                            <Zap className="h-3 w-3 fill-amber-600" />
+                            Rapid ({quiz.timeLimitMinutes}m)
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-md font-medium border border-blue-500/20">
+                            <Clock className="h-3 w-3" />
+                            Standard
+                          </span>
+                        )}
+
+                        <span className="hidden sm:inline">•</span>
+                        <span>{new Date(quiz.createdAt).toLocaleDateString()}</span>
+                      </div>
                       </div>
                       <div className="flex items-center gap-2 self-end sm:self-auto">
                         <Button size="sm" variant="outline" onClick={() => navigate(`/quiz/${quiz.id}`)}>

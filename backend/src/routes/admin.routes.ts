@@ -10,7 +10,15 @@ const router = express.Router();
 //Configure multer to use Cloudinary
 const upload = multer({ 
   storage: imageMapStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files (JPEG, PNG, WEBP, GIF) are allowed!') as any, false);
+    }
+  }
 });
 
 // Middleware to verify token
@@ -46,7 +54,7 @@ router.get('/health-test', (req, res) => {
 });
 
 // Create quiz with file uploads
-router.post('/create-quiz', verifyToken, upload.fields([
+router.post('/create-quiz', verifyToken, verifyAdmin, upload.fields([
   { name: 'unlabeledImage', maxCount: 1 },
   { name: 'labeledImage', maxCount: 1 }
 ]), async (req: any, res) => {
