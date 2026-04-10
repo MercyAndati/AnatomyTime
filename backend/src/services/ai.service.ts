@@ -16,7 +16,6 @@ export interface AIGenerationOptions {
 export class AIService {
   private genAI: GoogleGenerativeAI;
   private fileManager: GoogleAIFileManager;
-  private modelName = 'gemini-2.5-flash'; 
 
   constructor() {
     if (!process.env.GEMINI_API_KEY) {
@@ -27,13 +26,38 @@ export class AIService {
     console.log('AI Service & File Manager initialized');
   }
 
-  //Error Handler
+  // THE 3-TIER FALLBACK ENGINE
+  private async executeWithFallback(payload: any): Promise<any> {
+    try {
+      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      return await model.generateContent(payload);
+
+    } catch (error: any) {
+      const isBusy = error.status === 503 || error.status === 429 || error.message?.includes('503') || error.message?.includes('high demand');
+      
+      if (isBusy) {
+        try {
+          console.log('⚠️ 2.5 Flash is busy. Falling back to Gemini 2.5 Flash Lite...');
+          const liteModel = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+          return await liteModel.generateContent(payload);
+        } catch (liteError: any) {
+          console.log('⚠️ 2.5 Flash Lite is busy. Falling back to Gemini 1.5 Flash...');
+          const backupModel = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+          return await backupModel.generateContent(payload);
+        }
+      }
+      throw error;
+    }
+  }
+
+  // Error Handler
   private handleAIError(error: any): never {
     console.error('AI API Error:', error);
     const errMsg = error.message || '';
 
-    if (error.status === 429 || errMsg.includes('429') || errMsg.includes('quota')) {
-      throw new Error('SYSTEM_BUSY: The AI is currently experiencing high demand. Please wait 60 seconds and try again.');
+    // If ALL THREE models fail
+    if (error.status === 429 || error.status === 503 || errMsg.includes('429') || errMsg.includes('503') || errMsg.includes('quota')) {
+      throw new Error('SYSTEM_BUSY: Google AI servers are currently experiencing massive global demand. Please wait 30 seconds and try again.');
     }
 
     if (error.status === 400 || errMsg.includes('400') || errMsg.includes('invalid argument')) {
@@ -55,10 +79,7 @@ export class AIService {
 
       console.log(`Uploading ${displayName} to Gemini as ${mimeType}...`);
       
-      const uploadResult = await this.fileManager.uploadFile(filePath, {
-        mimeType,
-        displayName,
-      });
+      const uploadResult = await this.fileManager.uploadFile(filePath, { mimeType, displayName });
       
       let file = await this.fileManager.getFile(uploadResult.file.name);
       console.log(`Waiting for Google AI to process the document...`);
@@ -91,20 +112,15 @@ export class AIService {
 
   async validateFileContent(fileUri: string, mimeType: string): Promise<{ isAnatomy: boolean, reason: string }> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: this.modelName });
-      
       const prompt = `
       You are a document classification AI for a biology study tool. 
-      Your job is to determine if this document is appropriate for generating an anatomy, biology, or medical quiz.
-      
       Does this document contain substantial information about human or animal anatomy, biology, physiology, or medicine? 
-      (NOTE: Ignore peripheral text such as author details, website navigation elements, bibliographies, or publication metadata. As long as the primary subject matter of the document relates to biology or medicine, it is valid).
-      
-      Return ONLY valid JSON in this exact format:
-      {"isAnatomy": true, "reason": "Brief 1-sentence explanation"}
+      (NOTE: Ignore peripheral text like author details. As long as the primary subject relates to biology/medicine, it is valid).
+      Return ONLY valid JSON: {"isAnatomy": true, "reason": "Brief 1-sentence explanation"}
       `;
 
-      const result = await model.generateContent([
+      // Using the fallback engine!
+      const result = await this.executeWithFallback([
         { fileData: { mimeType: mimeType || 'application/pdf', fileUri } },
         { text: prompt }
       ]);
@@ -121,24 +137,18 @@ export class AIService {
 
   async validateTextContent(text: string): Promise<{ isAnatomy: boolean, reason: string }> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: this.modelName });
-      
       const prompt = `
       You are a strict but intelligent content filter for a medical study app.
-      Evaluate the following text. It might be a massive wall of study notes, OR it might be a short request/prompt from a student asking for a quiz.
-      
       Rule: Does this text either contain biological/anatomical facts, OR is it a request to study human/animal anatomy, biology, physiology, or medicine?
-      
-      (Note: Ignore peripheral text such as author details, website navigation elements, bibliographies, or publication metadata that may have been accidentally copy-pasted. As long as the primary subject matter of the text relates to biology or medicine, it is valid. However, strictly reject any text where the primary focus is entirely outside the medical/biological domain, such as recipes, programming code, or unrelated subjects.)
-      
-      Return ONLY valid JSON in this exact format:
-      {"isAnatomy": true, "reason": "Brief 1-sentence explanation"}
+      Return ONLY valid JSON: {"isAnatomy": true, "reason": "Brief 1-sentence explanation"}
       
       TEXT TO ANALYZE:
       ${text.substring(0, 15000)} 
       `;
 
-      const result = await model.generateContent(prompt);
+      // Using the fallback engine!
+      const result = await this.executeWithFallback(prompt);
+      
       const responseText = result.response.text();
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('Invalid validation format');
@@ -158,7 +168,6 @@ export class AIService {
     const { temperature = 0.7, maxTokens = 4000 } = options;
 
     try {
-      const model = this.genAI.getGenerativeModel({ model: this.modelName });
       console.log('Generating content...');
       
       const parts: any[] = [];
@@ -167,7 +176,8 @@ export class AIService {
       }
       parts.push({ text: prompt });
 
-      const result = await model.generateContent({
+      // Using the fallback engine!
+      const result = await this.executeWithFallback({
         contents: [{ role: 'user', parts }],
         generationConfig: {
           temperature,
@@ -180,7 +190,7 @@ export class AIService {
 
       return {
         text: text,
-        model: this.modelName,
+        model: 'Gemini-Auto-Fallback',
         timestamp: new Date()
       };
 

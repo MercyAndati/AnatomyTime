@@ -145,6 +145,25 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
     }
 
     // content generaton
+    const jsonQuestionExample = questionType === 'free-response' 
+      ? `{
+            "id": "q1",
+            "type": "free-response", 
+            "text": "Question text here",
+            "correctAnswer": "The exact correct answer here", 
+            "explanation": "Brief, appropriate explanation here.",
+            "points": 1
+          }`
+      : `{
+            "id": "q1",
+            "type": "multiple-choice", 
+            "text": "Question text here",
+            "options": ["Option A", "Option B", "Option C", "Option D"], 
+            "correctAnswer": "The exact correct answer here", 
+            "explanation": "Brief, appropriate explanation here.",
+            "points": 1
+          }`;
+
     const focusInstruction = focusTopic 
       ? `\nCRITICAL INSTRUCTION: The user specifically requested to focus ONLY on: "${focusTopic}". Ignore irrelevant sections.` 
       : '';
@@ -154,30 +173,22 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
       ${req.file ? `Base the quiz ONLY on the provided document.` : `Base the quiz on this topic: ${prompt || topic}`}
       ${focusInstruction}
 
-      REQUIREMENTS:
+      CRITICAL REQUIREMENTS:
       1. Create exactly ${numQuestions} questions.
-      2. QUESTION TYPES: ${
-        questionType === 'multiple-choice' ? 'Generate ONLY multiple-choice questions.' : 
-        questionType === 'free-response' ? 'Generate ONLY free-response questions.' : 
+      2. QUESTION FORMAT: ${
+        questionType === 'multiple-choice' ? '*** ALL QUESTIONS MUST BE MULTIPLE-CHOICE. YOU ARE STRICTLY FORBIDDEN FROM CREATING FREE-RESPONSE QUESTIONS. ***' : 
+        questionType === 'free-response' ? '*** ALL QUESTIONS MUST BE FREE-RESPONSE. YOU ARE STRICTLY FORBIDDEN FROM CREATING MULTIPLE-CHOICE QUESTIONS. DO NOT INCLUDE AN "options" ARRAY. ***' : 
         'Mix both multiple-choice and free-response questions.'
       }
-      3. EXPLANATIONS: Produce appropriate explanations where necessary. If the question is easy/direct, use 1 brief sentence. If it is a hard question requiring context, use 2-3 sentences max. DO NOT write massive paragraphs.
-      4. CRITICAL STRICT RULE: You must complete the entire JSON object. Pace your output length to guarantee the final closing brackets ']}' are printed.
+      3. EXPLANATIONS: Produce appropriate explanations where necessary (1 to 3 sentences max).
+      4. JSON INTEGRITY: You must complete the entire JSON object. Pace your output to guarantee the final closing brackets ']}' are printed.
 
       OUTPUT FORMAT (STRICT JSON):
       {
         "questions": [
-          {
-            "id": "q1",
-            "type": "multiple-choice", 
-            "text": "Question text here",
-            "options": ["Option A", "Option B", "Option C", "Option D"], 
-            "correctAnswer": "The exact correct answer here", 
-            "explanation": "Brief, appropriate explanation here.",
-            "points": 1
-          }
+          ${jsonQuestionExample}
         ],
-        "title": "Generate a short, specific 3-to-5 word title based on the core topic of the document or prompt",
+        "title": "Generate a short, specific 3-to-5 word title based on the core topic",
         "topic": "Generate a 1-to-2 word category (e.g., Neurology, Osteology)",
         "difficulty": "${difficulty}"
       }

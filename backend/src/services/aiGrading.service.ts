@@ -10,15 +10,36 @@ export interface GradingResult {
 
 export class AIGradingService {
   private genAI: GoogleGenerativeAI;
-  private model: any;
 
   constructor() {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error("GEMINI_API_KEY is missing in .env");
     }
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     console.log('Grading Service initialized via AI Studio');
+  }
+
+  // THE 3-TIER FALLBACK ENGINE FOR GRADING 
+  private async executeGradingWithFallback(payload: any): Promise<any> {
+    try {
+      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      return await model.generateContent(payload);
+    } catch (error: any) {
+      const isBusy = error.status === 503 || error.status === 429 || error.message?.includes('503') || error.message?.includes('high demand');
+      
+      if (isBusy) {
+        try {
+          console.log('Grading: 2.5 Flash is busy. Falling back to Lite...');
+          const liteModel = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+          return await liteModel.generateContent(payload);
+        } catch (liteError: any) {
+          console.log('Grading: Lite is busy. Falling back to 1.5 Flash...');
+          const backupModel = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+          return await backupModel.generateContent(payload);
+        }
+      }
+      throw error;
+    }
   }
 
   async gradeFreeResponse(
@@ -43,7 +64,7 @@ export class AIGradingService {
     `;
 
     try {
-      const result = await this.model.generateContent({
+      const result = await this.executeGradingWithFallback({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           responseMimeType: "application/json",
