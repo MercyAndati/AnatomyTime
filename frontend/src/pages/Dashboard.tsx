@@ -199,21 +199,35 @@ export const Dashboard = () => {
               </Card>
             ) : (
               <div className="grid gap-3 sm:gap-4">
-                {quizzes.map((quiz) => (
+                {quizzes.map((quiz) => {
+                  // Determine the format of the quiz 
+                  const hasMCQ = quiz.questions?.some(q => q.type === 'multiple-choice');
+                  const hasFRQ = quiz.questions?.some(q => q.type === 'free-response');
+                  const formatLabel = hasMCQ && hasFRQ ? 'Mixed' : hasFRQ ? 'Free Response' : 'MCQ';
+
+                  return (
                   <Card key={quiz.id} className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex-1 min-w-0"> 
                         <h3 className="font-semibold mb-1 truncate text-base sm:text-lg">{quiz.title}</h3>
+                        
+                        {/* THIS IS THE DIV YOU WANTED TO EDIT */}
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs sm:text-sm text-muted-foreground mt-1">
+                        
                         <span className="flex items-center gap-1 font-medium bg-secondary/50 px-2 py-0.5 rounded-md">
                           <FileText className="h-3 w-3" />
                           {quiz.questions.length} Qs
                         </span>
                         
+                        {/* The New Format Tag (MCQ, Mixed, Free Response) */}
+                        <span className="flex items-center gap-1 font-medium bg-purple-500/10 text-purple-600 px-2 py-0.5 rounded-md border border-purple-500/20">
+                          {formatLabel}
+                        </span>
+                        
                         <span className="capitalize">{quiz.difficulty}</span>
                         <span className="hidden sm:inline">•</span>
                         
-                        {/* The New Rapid / Standard Indicator */}
+                        {/* The Rapid / Standard Indicator */}
                         {quiz.timeLimitMinutes ? (
                           <span className="flex items-center gap-1 text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-md font-medium border border-amber-500/20">
                             <Zap className="h-3 w-3 fill-amber-600" />
@@ -241,7 +255,7 @@ export const Dashboard = () => {
                       </div>
                     </div>
                   </Card>
-                ))}
+                )})}
               </div>
             )}
           </TabsContent>
