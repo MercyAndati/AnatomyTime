@@ -109,7 +109,8 @@ router.post('/', verifyToken, async (req: any, res: any) => {
       difficulty: difficulty || 'standard',
       category: category || 'Anatomy',
       tags: tags || [],
-      createdBy: req.userId
+      createdBy: req.userId,
+      isPublic: true
     });
 
     await quiz.save();

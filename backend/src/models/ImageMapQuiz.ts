@@ -101,7 +101,7 @@ const imageMapQuizSchema = new Schema<IImageMapQuiz>({
   },
   isPublic: {
     type: Boolean,
-    default: false
+    default: true
   }
 }, {
   timestamps: true
