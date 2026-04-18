@@ -101,13 +101,15 @@ const ImageMapQuiz = () => {
 
   // Timer for quiz
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: number;
+    
     if (selectedQuiz && !showResults && !showReview) {
-      interval = setInterval(() => {
+      interval = window.setInterval(() => {
         setTimeSpent(Math.floor((Date.now() - quizStartTime) / 1000));
       }, 1000);
     }
-    return () => clearInterval(interval);
+    
+    return () => window.clearInterval(interval);
   }, [selectedQuiz, showResults, showReview, quizStartTime]);
 
   const getImageUrl = (url?: string) => {
@@ -864,8 +866,8 @@ const ImageMapQuiz = () => {
                           const points = getRegionPoints(region);
                           if (!points) return null;
 
-                          let fillColor = "rgba(123, 231, 245, 0.3)"; 
-                          let strokeColor = "rgba(102, 243, 243, 0.7)";
+                          let fillColor = "rgba(123, 237, 245, 0.3)"; 
+                          let strokeColor = "rgba(14, 87, 245, 0.8)";
                           let strokeWidth = 1;
 
                           if (clickedRegions[region.id] === 'correct') {
