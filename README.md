@@ -29,35 +29,33 @@ Open two terminal windows.
 
 Bash
 # Terminal 1 (Backend)
-cd backend
-
+cd backend\
 npm install
 
 # Terminal 2 (Frontend)
-cd frontend
-
+cd frontend\
 npm install
 
-Environment Variables:
+### Environment Variables:
 Create a .env file in the backend directory and add the following:
-MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-JWT_EXPIRES_IN=7d
-PORT=5000
-NODE_ENV=development
-MAX_FILE_SIZE=52428800
-UPLOAD_PATH=./uploads
-FRONTEND_URL=http://localhost:3000
-GEMINI_API_KEY=your_google_ai_studio_key
-CLOUDINARY_CLOUD_NAME=your_cloudinary_name
-CLOUDINARY_API_KEY=your_cloudinary_key
-CLOUDINARY_API_SECRET=your_cloudinary_secret
+MONGODB_URI=your_mongodb_connection_string\
+JWT_SECRET=your_jwt_secret\
+JWT_EXPIRES_IN=7d\
+PORT=5000\
+NODE_ENV=development\
+MAX_FILE_SIZE=52428800\
+UPLOAD_PATH=./uploads\
+FRONTEND_URL=http://localhost:3000\
+GEMINI_API_KEY=your_google_ai_studio_key\
+CLOUDINARY_CLOUD_NAME=your_cloudinary_name\
+CLOUDINARY_API_KEY=your_cloudinary_key\
+CLOUDINARY_API_SECRET=your_cloudinary_secret\
 IS_AI_ENABLED=true
 
-Create a .env file in the frontend directory and add:
-VITE_API_URL=http://localhost:5000/api
-VITE_BACKEND_URL=http://localhost:5000
+Create a .env file in the frontend directory and add:\
+VITE_API_URL=http://localhost:5000/api\
+VITE_BACKEND_URL=http://localhost:5000\
 
 Start the development servers:
-### Run in both frontend and backend directories
+Run in both frontend and backend directories\
 npm run dev
