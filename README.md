@@ -45,7 +45,7 @@ PORT=5000\
 NODE_ENV=development\
 MAX_FILE_SIZE=52428800\
 UPLOAD_PATH=./uploads\
-FRONTEND_URL=http://localhost:3000\
+FRONTEND_URL=http://localhost:3000
 GEMINI_API_KEY=your_google_ai_studio_key\
 CLOUDINARY_CLOUD_NAME=your_cloudinary_name\
 CLOUDINARY_API_KEY=your_cloudinary_key\
@@ -53,8 +53,8 @@ CLOUDINARY_API_SECRET=your_cloudinary_secret\
 IS_AI_ENABLED=true
 
 Create a .env file in the frontend directory and add:\
-VITE_API_URL=http://localhost:5000/api\
-VITE_BACKEND_URL=http://localhost:5000\
+VITE_API_URL=http://localhost:5000/api
+VITE_BACKEND_URL=http://localhost:5000
 
 Start the development servers:
 Run in both frontend and backend directories\
