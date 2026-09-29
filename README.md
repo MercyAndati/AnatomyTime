@@ -1,7 +1,9 @@
 # AnatomyTime
 
 A full-stack educational platform designed to help medical students master clinical anatomy through AI-generated quizzes, flashcards, rapid recall exercises, and interactive diagram identification.
-*** live link:**  https://anatomyai-orcin.vercel.app/
+
+### live link:  
+https://anatomyai-orcin.vercel.app/
 
 ## Key Features
 * **AI Quiz Generation:** Automatically generate multiple-choice, free-response, or mixed clinical anatomy quizzes from text prompts or uploaded documents.
