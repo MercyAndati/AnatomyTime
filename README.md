@@ -2,7 +2,7 @@
 
 A full-stack educational platform designed to help medical students master clinical anatomy through AI-generated quizzes, flashcards, rapid recall exercises, and interactive diagram identification.
 
-### live link:  
+### App link:  
 https://anatomyai-orcin.vercel.app/
 
 ## Key Features
@@ -30,10 +30,12 @@ Open two terminal windows.
 Bash
 # Terminal 1 (Backend)
 cd backend
+
 npm install
 
 # Terminal 2 (Frontend)
 cd frontend
+
 npm install
 
 Environment Variables:
@@ -57,5 +59,5 @@ VITE_API_URL=http://localhost:5000/api
 VITE_BACKEND_URL=http://localhost:5000
 
 Start the development servers:
-# Run in both frontend and backend directories
+### Run in both frontend and backend directories
 npm run dev
