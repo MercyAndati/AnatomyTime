@@ -366,7 +366,7 @@ const Community = () => {
           <div className="flex flex-col lg:flex-row gap-8">
             
             {/*  MOBILE SCROLL MENU */}
-            <div className="lg:hidden-mx-4 px-4 overflow-x-auto no-scrollbar flex gap-2 pb-2">
+            <div className="lg:hidden mx-4 px-4 overflow-x-auto no-scrollbar flex gap-2 pb-2">
               <button
                 onClick={() => { setIsFeedbackOpen(true); loadFeedbacks(); }}
                 className="flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors border bg-primary/10 text-primary border-primary/20"
