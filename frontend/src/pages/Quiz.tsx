@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Upload, X, Sparkles, Loader2, Target, FileText, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { api } from "@/utils/api";
+import config from "@/config";
 
 const Quiz = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const Quiz = () => {
   const [numQuestions, setNumQuestions] = useState("10");
   const [difficulty, setDifficulty] = useState("standard");
   const [questionType, setQuestionType] = useState("mixed");
+  const [showDemoOptions, setShowDemoOptions] = useState(false);
   
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null); 
@@ -132,7 +134,84 @@ const Quiz = () => {
           </p>
         </div>
 
-        <div className="space-y-6">
+      <div className="mb-8 bg-card border rounded-lg p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Quick Start: Try a Demo
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Explore the diffrent quiz types that can be generated.
+            </p>
+          </div>
+          <Button
+            onClick={() => setShowDemoOptions(!showDemoOptions)}
+            variant={showDemoOptions ? "outline" : "default"}
+            className="w-full sm:w-auto font-semibold"
+          >
+            {showDemoOptions ? "Hide Options" : "View Demo Quizzes"}
+          </Button>
+        </div>
+
+        {showDemoOptions && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 animate-in slide-in-from-top-2 fade-in duration-300">
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col gap-2 border-2 hover:border-primary hover:bg-primary/5"
+              onClick={() => navigate('/quiz/69d90f578c0c7d37182fef02')}
+            >
+              <Target className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Multiple Choice</span>
+              <span className="text-xs text-muted-foreground font-normal">Standard 10-question MCQ</span>
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col gap-2 border-2 hover:border-primary hover:bg-primary/5"
+              onClick={() => navigate('/quiz/69d91958cdf8dcd73dd0ad38')}
+            >
+              <FileText className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Free Response</span>
+              <span className="text-xs text-muted-foreground font-normal">Type your own answers</span>
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col gap-2 border-2 hover:border-primary hover:bg-primary/5"
+              onClick={() => navigate('/quiz/69d919e2b17dcdfccc29639c')}
+            >
+              <Sparkles className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Mixed Mode</span>
+              <span className="text-xs text-muted-foreground font-normal">Combined question types</span>
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="relative mb-8">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-2 text-muted-foreground font-semibold">OR CREATE YOUR OWN</span>
+        </div>
+      </div>
+
+        {/*No AI DEMO BANNER*/}
+        {!config.isAiEnabled && (
+          <div className="mb-6 p-6 border-2 border-primary/20 bg-primary/5 rounded-xl text-center animate-in fade-in slide-in-from-top-4">
+            <h3 className="text-lg font-bold text-primary mb-2">AI Generation Currently Paused</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Live AI generation is disabled for maintenance, but you can still experience the app!
+            </p>
+            <Button onClick={() => navigate('/quiz/69f391b7c05655681cfb969b')} className="w-full sm:w-auto font-semibold">
+              View Pre-Generated Quiz
+            </Button>
+          </div>
+        )}
+
+        <div className={`space-y-6 transition-all duration-500 ${!config.isAiEnabled ? 'opacity-40 pointer-events-none grayscale-[0.3]' : ''}`}>
           {/* File Upload Area */}
           <div className="border rounded-lg p-6 bg-card">
             <h2 className="text-sm font-medium mb-3">Upload study materials (Optional)</h2>
@@ -274,7 +353,7 @@ const Quiz = () => {
 
           {/* Quiz Settings Grid */}
           <div className="border rounded-lg p-6 bg-card">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-4 items-end">
               <div>
                 <Label className="text-sm">Number of Questions</Label>
                 <Input
@@ -326,10 +405,12 @@ const Quiz = () => {
           {/* Generate Button */}
           <Button 
             onClick={handleGenerate}
-            disabled={isGenerateDisabled}
+            disabled={isGenerateDisabled || !config.isAiEnabled}
             className="w-full h-12 text-base gradient-primary relative overflow-hidden"
           >
-            {loading ? (
+            {!config.isAiEnabled ? (
+              <span className="font-semibold">AI Service Paused</span>
+            ) : loading ? (
               <div className="flex flex-col items-center justify-center">
                 <div className="flex items-center">
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

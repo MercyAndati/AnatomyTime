@@ -65,6 +65,13 @@ router.post('/generate', verifyToken, upload.single('file'), async (req: any, re
   let geminiFile: any = null;
 
   try {
+    if (process.env.IS_AI_ENABLED === 'false') {
+      return res.status(503).json({ 
+        message: 'Service Paused', 
+        error: 'AI generation is temporarily disabled for maintenance. Please explore the community dashboard to view pre-generated medical content!' 
+      });
+    }
+    
     const { 
       prompt, 
       topic,

@@ -1,4 +1,3 @@
-// backend/src/routes/note.routes.ts
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
@@ -10,7 +9,7 @@ const router = express.Router();
 
 const upload = multer({
   storage: noteStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
       'application/pdf',

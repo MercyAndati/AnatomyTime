@@ -11,7 +11,6 @@ import { AIGradingService } from '../services/aiGrading.service';
 
 const router = express.Router();
 
-// Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../../uploads/temp');
@@ -68,10 +67,16 @@ const getGradingService = (req: any): AIGradingService => { return new AIGrading
 // Generate quiz from prompt and/or file
 router.post('/generate', verifyToken, upload.single('file'), async (req: any, res) => {
   const aiService = getAIService(req);
-
   let geminiFile: any = null;
 
   try {
+    if (process.env.IS_AI_ENABLED === 'false') {
+      return res.status(503).json({ 
+        message: 'Service Paused', 
+        error: 'AI generation is temporarily disabled for maintenance. Please explore the community dashboard to view pre-generated medical content!' 
+      });
+    }
+    
     const { 
       prompt, 
       title, 

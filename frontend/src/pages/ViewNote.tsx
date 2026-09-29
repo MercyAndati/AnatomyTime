@@ -140,7 +140,7 @@ export const ViewNote = () => {
                 renderTextLayer={true}
                 renderAnnotationLayer={true}
                 className="max-w-full"
-                width={Math.min(window.innerWidth - 64, 800)} // Responsive width
+                width={Math.min(window.innerWidth - 64, 800)} 
               />
             </Document>
           </div>

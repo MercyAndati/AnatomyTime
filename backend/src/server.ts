@@ -63,7 +63,6 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Initialize services and attach to app
 app.locals.aiService = new AIService(); 
 
 app.use('/api/auth', authRoutes);
@@ -74,8 +73,6 @@ app.use('/api/community', communityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/feedback', feedbackRoutes); 
-
-// Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check endpoint

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Upload, X, Sparkles, Loader2, Target, FileText, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { api } from "@/utils/api";
+import config from "@/config";
 
 const Flashcards = () => {
   const navigate = useNavigate();
@@ -124,8 +125,46 @@ const Flashcards = () => {
           </p>
         </div>
 
-        <div className="space-y-6">
-          {/* File Upload */}
+        {!config.isAiEnabled && (
+          <div className="mb-6 p-6 border-2 border-primary/20 bg-primary/5 rounded-xl text-center animate-in fade-in slide-in-from-top-4">
+            <h3 className="text-lg font-bold text-primary mb-2">AI Generation Currently Paused</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Live AI generation is disabled for maintenance, but you can still experience the app!
+            </p>
+            <Button onClick={() => navigate('/flashcards/69d912a08c0c7d37182fef58')} className="w-full sm:w-auto font-semibold">
+              View Pre-Generated Flashcard
+            </Button>
+          </div>
+        )}
+
+        <div className="mb-8 bg-card border rounded-lg p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Quick Start: Try a Demo
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Generated Flashcard Example.
+            </p>
+          </div>
+          <Button 
+            onClick={() => navigate('/flashcards/69d912a08c0c7d37182fef58')} 
+            className="w-full sm:w-auto font-semibold"
+          >
+            View Demo Flashcards
+          </Button>
+        </div>
+
+        <div className="relative mb-8">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground font-semibold">OR CREATE YOUR OWN</span>
+          </div>
+        </div>
+
+        <div className={`space-y-6 transition-all duration-500 ${!config.isAiEnabled ? 'opacity-40 pointer-events-none grayscale-[0.3]' : ''}`}>          {/* File Upload */}
           <div className="border rounded-lg p-6 bg-card">
             <h2 className="text-sm font-medium mb-3">Upload study materials (Optional)</h2>
             <input
@@ -284,10 +323,12 @@ const Flashcards = () => {
 
           <Button 
             onClick={handleGenerate}
-            disabled={isGenerateDisabled}
+            disabled={isGenerateDisabled || !config.isAiEnabled}
             className="w-full h-12 text-base gradient-primary relative overflow-hidden"
           >
-            {loading ? (
+            {!config.isAiEnabled ? (
+              <span className="font-semibold">AI Service Paused</span>
+            ) : loading ? (
               <div className="flex flex-col items-center justify-center">
                 <div className="flex items-center">
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

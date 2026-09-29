@@ -20,7 +20,7 @@ export const noteStorage = new CloudinaryStorage({
     return {
       folder: 'anatomytime/notes',
       resource_type: isImage ? 'image' : 'raw',
-      format: isImage ? undefined : file.originalname.split('.').pop(), // Keep original extension for raw files
+      format: isImage ? undefined : file.originalname.split('.').pop(), 
       public_id: `note-${Date.now()}`,
     };
   },

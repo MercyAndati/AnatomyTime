@@ -141,7 +141,7 @@ export function Navigation() {
                         key={link.to}
                         to={link.to}
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-4 text-base font-medium text-foreground hover:text-primary transition-colors py-3 px-6 hover:bg-accent/50"
+                        className="flex items-center gap-3 text-base font-medium text-foreground hover:text-primary transition-colors py-3 px-6 hover:bg-accent/50"
                         activeClassName="text-primary bg-accent/30 border-l-4 border-primary"
                       >
                         <Icon className="h-5 w-5" />
@@ -211,7 +211,7 @@ export function Navigation() {
                 <NavLink
                   key={link.to}
                   to={link.to}
-                  className="flex items-center gap-2 text-md font-medium text-foreground hover:text-primary transition-colors group relative"
+                  className="flex items-center gap-2 text-sm font-bold text-foreground hover:text-primary transition-colors group relative"
                   activeClassName="text-primary"
                 >
                   <Icon className="h-4 w-5 group-hover:scale-110 transition-transform" />

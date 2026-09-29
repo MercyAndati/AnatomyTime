@@ -293,7 +293,6 @@ const AdminWithPicker = () => {
     if (unlabeledImage) formData.append('unlabeledImage', unlabeledImage);
     if (labeledImage) formData.append('labeledImage', labeledImage);
     
-    // Test the endpoint first
     const testResponse = await fetch(`${config.apiUrl}/admin/health-test`, {
       method: 'GET',
       headers: {
@@ -303,12 +302,10 @@ const AdminWithPicker = () => {
     
     console.log('Test endpoint status:', testResponse.status);
     
-    //Actual request
     const response = await fetch(`${config.apiUrl}/admin/create-quiz`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        // Don't set Content-Type for FormData - browser sets it automatically
       },
       body: formData,
     });
@@ -714,7 +711,6 @@ const AdminWithPicker = () => {
                         </svg>
                         
                         {/* Region labels */}
-                        {/* Region labels - small circles with hover tooltips */}
                         <div className="absolute top-0 left-0" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
                           {regions.map((region, index) => {
                             const points = region.points.split(' ').map(p => {

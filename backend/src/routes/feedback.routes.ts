@@ -5,7 +5,6 @@ import { Feedback } from '../models/Feedback';
 
 const router = express.Router();
 
-// Middleware to verify token and attach user details
 const verifyToken = async (req: any, res: any, next: any) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
@@ -16,7 +15,6 @@ const verifyToken = async (req: any, res: any, next: any) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
     req.userId = (decoded as any).userId;
     
-    // Safely get the User model to fetch their name and admin status
     const User = mongoose.model('User');
     const user: any = await User.findById(req.userId);
     
@@ -32,7 +30,6 @@ const verifyToken = async (req: any, res: any, next: any) => {
   }
 };
 
-// POST: Submit new feedback
 router.post('/', verifyToken, async (req: any, res) => {
   try {
     const { title, message, isPublic } = req.body;
@@ -50,7 +47,6 @@ router.post('/', verifyToken, async (req: any, res) => {
   }
 });
 
-// GET: Fetch feedback (Admins see all, Users see Public + their own Private)
 router.get('/', verifyToken, async (req: any, res) => {
   try {
     const query = req.user.isAdmin 
@@ -64,7 +60,6 @@ router.get('/', verifyToken, async (req: any, res) => {
   }
 });
 
-// DELETE: Remove feedback (Admins or the original author only)
 router.delete('/:id', verifyToken, async (req: any, res) => {
   try {
     const feedback = await Feedback.findById(req.params.id);

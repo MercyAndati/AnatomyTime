@@ -145,7 +145,6 @@ export const QuizSession = ({
               <Progress value={questionProgress} className="h-2" />
             </div>
 
-            {/* Time Remaining Progress Bar (Only visible in Rapid Mode) */}
             {isRapid && timeLimitMinutes && (
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs font-medium">

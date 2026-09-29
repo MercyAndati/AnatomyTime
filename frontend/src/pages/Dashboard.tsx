@@ -219,13 +219,13 @@ export const Dashboard = () => {
                           {quiz.questions.length} Qs
                         </span>
                         
-                        {/* The New Format Tag (MCQ, Mixed, Free Response) */}
+                        <span className="capitalize">{quiz.difficulty}</span>
+                        <span className="hidden sm:inline">•</span>
+
+                        {/* Format Tag (MCQ, Mixed, Free Response) */}
                         <span className="flex items-center gap-1 font-medium bg-purple-500/10 text-purple-600 px-2 py-0.5 rounded-md border border-purple-500/20">
                           {formatLabel}
                         </span>
-                        
-                        <span className="capitalize">{quiz.difficulty}</span>
-                        <span className="hidden sm:inline">•</span>
                         
                         {/* The Rapid / Standard Indicator */}
                         {quiz.timeLimitMinutes ? (
@@ -247,7 +247,7 @@ export const Dashboard = () => {
                       <div className="flex items-center gap-2 self-end sm:self-auto">
                         <Button size="sm" variant="outline" onClick={() => navigate(`/quiz/${quiz.id}`)}>
                           <RotateCcw className="h-4 w-4 mr-1 sm:mr-0" />
-                          <span className="sm:hidden text-xs">Retake</span>
+                          <span className="text-xs">Retake</span>
                         </Button>
                         <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteQuiz(quiz.id)}>
                           <Trash2 className="h-4 w-4" />
